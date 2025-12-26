@@ -73,7 +73,7 @@ $res_kamar = mysqli_query($conn, $q_kamar);
     <div class="container mb-5">
         <div class="row">
             <div class="col-md-8">
-                <img src="https://via.placeholder.com/800x400?text=Foto+Utama+Kost" class="hero-img mb-4 shadow-sm">
+                <img src="https://lh3.googleusercontent.com/S_dLYzgm3N_IlPm1dO81Nc3AG_1P8-T3TIp1INDF9X_IBa-c2jOk8Ha1Zei5KoqvU2rd8VfdBuHX3Y1XePRfFBepWlqi7GhJ20qMlTZpu4KFnVmeX67rgoDUBeFJc0Q6i-0lmhKQ" class="hero-img mb-4 shadow-sm">
 
                 <div class="card shadow-sm border-0 p-4 mb-4">
                     <div class="d-flex justify-content-between align-items-start">
@@ -132,14 +132,16 @@ $res_kamar = mysqli_query($conn, $q_kamar);
                                 </div>
                             </div>
                             <div class="col-md-3 text-end">
-                                <h5 class="fw-bold text-primary">Rp <?= number_format($k['harga_per_bulan'], 0, ',', '.'); ?></h5>
-                                <p class="small <?= $k['stok_kamar'] > 0 ? 'text-success' : 'text-danger'; ?>">Sisa <?= $k['stok_kamar']; ?> Kamar</p>
+                                <h5 class="fw-bold text-primary mb-0">Rp <?= number_format($k['harga_per_bulan'], 0, ',', '.'); ?></h5>
+                                <small class="text-muted d-block mb-3">per bulan</small>
 
-                                <?php if (isset($_SESSION['login'])): ?>
-                                    <a href="mahasiswa/booking.php?id=<?= $k['id_kamar']; ?>" class="btn btn-success btn-sm w-100 mt-2">Pesan Sekarang</a>
-                                <?php else: ?>
-                                    <a href="login.php?pesan=login_dulu&next=detail_kost.php?id=<?= $id_kost; ?>" class="btn btn-outline-success btn-sm w-100 mt-2">Login untuk Pesan</a>
-                                <?php endif; ?>
+                                <a href="detail_kamar.php?id=<?= $k['id_kamar']; ?>" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                                    <i class="bi bi-info-circle"></i> Lihat Detail Kamar
+                                </a>
+
+                                <a href="booking.php?id=<?= $k['id_kamar']; ?>" class="btn btn-success btn-sm w-100 <?= $k['stok_kamar'] <= 0 ? 'disabled' : ''; ?>">
+                                    Pesan Kamar
+                                </a>
                             </div>
                         </div>
                     </div>
