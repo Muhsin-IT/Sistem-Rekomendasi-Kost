@@ -17,19 +17,18 @@ if (isset($_POST['simpan_kost'])) {
     $lat    = $_POST['latitude'];
     $lng    = $_POST['longitude'];
 
+    // Simpan ke tabel kost
     $query_kost = "INSERT INTO kost (id_pemilik, nama_kost, alamat, latitude, longitude, jenis_kost) 
                    VALUES ('$id_user_login', '$nama', '$alamat', '$lat', '$lng', '$jenis')";
 
     if (mysqli_query($conn, $query_kost)) {
         $id_kost_baru = mysqli_insert_id($conn);
 
+        // Fungsi upload foto
         function uploadFoto($file, $id_k, $kat, $is360, $conn)
         {
             if (!empty($file['name'])) {
                 $nama_file = time() . '_' . rand(100, 999) . '_' . $file['name'];
-                // Pastikan folder sudah ada
-                if (!is_dir("../assets/img/galeri/")) mkdir("../assets/img/galeri/", 0777, true);
-
                 move_uploaded_file($file['tmp_name'], "../assets/img/galeri/" . $nama_file);
                 mysqli_query($conn, "INSERT INTO galeri (id_kost, nama_file, kategori_foto, is_360) VALUES ('$id_k', '$nama_file', '$kat', '$is360')");
             }
@@ -39,6 +38,7 @@ if (isset($_POST['simpan_kost'])) {
         uploadFoto($_FILES['foto_dalam'], $id_kost_baru, 'Dalam Bangunan', isset($_POST['is_360_dalam']) ? 1 : 0, $conn);
         uploadFoto($_FILES['foto_jalan'], $id_kost_baru, 'Tampak Jalan', 0, $conn);
 
+        // Simpan Fasilitas & Peraturan
         if (!empty($_POST['fasilitas'])) {
             foreach ($_POST['fasilitas'] as $id) mysqli_query($conn, "INSERT INTO rel_fasilitas (id_kost, id_master_fasilitas) VALUES ('$id_kost_baru', '$id')");
         }
@@ -61,9 +61,8 @@ if (isset($_POST['simpan_kost'])) {
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@3.1.4/dist/esri-leaflet-geocoder.css">
-    <script src="https://unpkg.com/esri-leaflet-geocoder@3.1.4/dist/esri-leaflet-geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <style>
         .sidebar {
@@ -88,13 +87,6 @@ if (isset($_POST['simpan_kost'])) {
             border-radius: 8px;
             border: 2px solid #ccc;
             z-index: 1;
-        }
-
-        /* Mempercantik kotak pencarian */
-        .geocoder-control-input {
-            font-family: inherit;
-            border: 2px solid #198754 !important;
-            height: 35px !important;
         }
     </style>
 </head>
@@ -124,7 +116,7 @@ if (isset($_POST['simpan_kost'])) {
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Lokasi Peta (Cari nama tempat / geser pin)</label>
+                            <label class="form-label fw-bold">Lokasi Peta (Geser Pin untuk update alamat)</label>
                             <div id="map"></div>
                             <small class="text-danger fw-bold" id="status_map"></small>
                             <div class="row mt-2 g-2">
@@ -175,8 +167,6 @@ if (isset($_POST['simpan_kost'])) {
         var startLng = 110.3554;
 
         var map = L.map('map').setView([startLat, startLng], 15);
-
-        // Menggunakan Tiles OSM Standard
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap'
         }).addTo(map);
@@ -186,10 +176,10 @@ if (isset($_POST['simpan_kost'])) {
             draggable: true
         }).addTo(map);
 
-        // 3. FUNGSI FETCH ALAMAT (Direct API - Pamungkas)
-        // Tetap kita pakai ini untuk mendapatkan nama jalan saat Pin digeser/klik
+        // 3. FUNGSI FETCH ALAMAT (INILAH KUNCINYA!)
+        // Kita tidak pakai plugin geocoder untuk ini, tapi fetch manual agar stabil.
         function getAddress(lat, lng) {
-            document.getElementById('status_map').innerText = "Sedang mencari detail alamat...";
+            document.getElementById('status_map').innerText = "Sedang mencari alamat...";
             document.getElementById('lat').value = lat;
             document.getElementById('lng').value = lng;
 
@@ -198,11 +188,12 @@ if (isset($_POST['simpan_kost'])) {
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('alamat_lengkap').value = data.display_name;
+                    document.getElementById('alamat_lengkap').value = data.display_name; // Isi Alamat
                     document.getElementById('status_map').innerText = "";
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    document.getElementById('status_map').innerText = "Gagal memuat alamat. Cek internet.";
                 });
         }
 
@@ -218,35 +209,19 @@ if (isset($_POST['simpan_kost'])) {
             getAddress(e.latlng.lat, e.latlng.lng);
         });
 
-        // 6. FITUR PENCARIAN BARU (MENGGUNAKAN ESRI ARCGIS)
-        // Ini lebih bagus daripada Nominatim bawaan
-        var searchControl = L.esri.Geocoding.geosearch({
-            position: 'topright',
-            placeholder: 'Cari tempat (Kampus, Jalan, Toko)',
-            useMapBounds: false,
-            providers: [
-                L.esri.Geocoding.arcgisOnlineProvider({
-                    // Mencari tempat penting, alamat, dll
-                    apikey: null // Gratis untuk penggunaan basic
-                })
-            ]
-        }).addTo(map);
-
-        // SAAT HASIL PENCARIAN DIPILIH
-        searchControl.on('results', function(data) {
-            if (data.results.length > 0) {
-                var result = data.results[0];
-                var lat = result.latlng.lat;
-                var lng = result.latlng.lng;
-
-                // Pindahkan marker ke hasil pencarian
-                marker.setLatLng(result.latlng);
-                map.setView(result.latlng, 17);
-
-                // Isi form alamat & koordinat
-                getAddress(lat, lng);
-            }
-        });
+        // 6. PLUGIN SEARCH BAR (Hanya untuk mencari lokasi awal)
+        L.Control.geocoder({
+                defaultMarkGeocode: false,
+                placeholder: "Cari lokasi..."
+            })
+            .on('markgeocode', function(e) {
+                var bbox = e.geocode.bbox;
+                var center = e.geocode.center;
+                marker.setLatLng(center);
+                map.fitBounds(bbox);
+                getAddress(center.lat, center.lng);
+            })
+            .addTo(map);
 
         // Panggil fungsi sekali di awal
         getAddress(startLat, startLng);

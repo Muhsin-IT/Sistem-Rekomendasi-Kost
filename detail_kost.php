@@ -2,41 +2,60 @@
 session_start();
 include 'koneksi.php';
 
-// 1. Ambil ID Kost dari URL
 if (!isset($_GET['id'])) {
-    header("Location: index.php");
+    header("Location: index");
     exit;
 }
 
 $id_kost = $_GET['id'];
 
-// 2. Ambil data utama Kost & Pemilik
-$query_kost = "SELECT kost.*, users.nama_lengkap as nama_pemilik, users.no_hp 
-               FROM kost 
-               JOIN users ON kost.id_pemilik = users.id_user 
-               WHERE kost.id_kost = '$id_kost'";
-$res_kost = mysqli_query($conn, $query_kost);
-$kost = mysqli_fetch_assoc($res_kost);
+// 1. DATA KOST
+$query = "SELECT k.*, u.nama_lengkap as nama_pemilik, u.no_hp as hp_pemilik 
+          FROM kost k JOIN users u ON k.id_pemilik = u.id_user 
+          WHERE k.id_kost = '$id_kost'";
+$kost = mysqli_fetch_assoc(mysqli_query($conn, $query));
 
-if (!$kost) {
-    die("Data kost tidak ditemukan.");
+// 2. GALERI KOST (HANYA FOTO GEDUNG/UMUM)
+// Foto Biasa (id_kamar NULL & is_360 = 0)
+$galeri_biasa = [];
+$q_gb = mysqli_query($conn, "SELECT * FROM galeri WHERE id_kost='$id_kost' AND id_kamar IS NULL AND is_360=0");
+while ($row = mysqli_fetch_assoc($q_gb)) $galeri_biasa[] = $row;
+
+// Foto 360 (id_kamar NULL & is_360 = 1)
+$galeri_360 = [];
+$q_g360 = mysqli_query($conn, "SELECT * FROM galeri WHERE id_kost='$id_kost' AND id_kamar IS NULL AND is_360=1");
+while ($row = mysqli_fetch_assoc($q_g360)) $galeri_360[] = $row;
+
+// 3. FASILITAS & PERATURAN KOST
+$fasilitas = [];
+$q_fas = mysqli_query($conn, "SELECT mf.nama_fasilitas FROM rel_fasilitas rf JOIN master_fasilitas mf ON rf.id_master_fasilitas = mf.id_master_fasilitas WHERE rf.id_kost='$id_kost' AND rf.id_kamar IS NULL");
+while ($row = mysqli_fetch_assoc($q_fas)) $fasilitas[] = $row;
+
+$peraturan = [];
+$q_per = mysqli_query($conn, "SELECT mp.nama_peraturan FROM rel_peraturan rp JOIN master_peraturan mp ON rp.id_master_peraturan = mp.id_master_peraturan WHERE rp.id_kost='$id_kost' AND rp.id_kamar IS NULL");
+while ($row = mysqli_fetch_assoc($q_per)) $peraturan[] = $row;
+
+// 4. DAFTAR KAMAR
+$kamars = [];
+$q_kam = mysqli_query($conn, "SELECT * FROM kamar WHERE id_kost='$id_kost'");
+while ($row = mysqli_fetch_assoc($q_kam)) {
+    // Ambil 1 foto thumbnail kamar
+    $f = mysqli_fetch_assoc(mysqli_query($conn, "SELECT nama_file FROM galeri WHERE id_kamar='" . $row['id_kamar'] . "' LIMIT 1"));
+    $row['foto'] = $f ? $f['nama_file'] : null;
+    $kamars[] = $row;
 }
 
-// 3. Ambil Fasilitas Umum Kost
-$q_f_umum = "SELECT mf.nama_fasilitaS FROM rel_fasilitas rf 
-             JOIN master_fasilitas mf ON rf.id_master_fasilitas = mf.id_master_fasilitaS 
-             WHERE rf.id_kost = '$id_kost'";
-$res_f_umum = mysqli_query($conn, $q_f_umum);
-
-// 4. Ambil Peraturan Kost
-$q_p = "SELECT mp.nama_peraturan FROM rel_peraturan rp 
-        JOIN master_peraturan mp ON rp.id_master_peraturan = mp.id_master_peraturan 
-        WHERE rp.id_kost = '$id_kost'";
-$res_p = mysqli_query($conn, $q_p);
-
-// 5. Ambil Daftar Tipe Kamar
-$q_kamar = "SELECT * FROM kamar WHERE id_kost = '$id_kost'";
-$res_kamar = mysqli_query($conn, $q_kamar);
+// Fungsi Jarak
+function hitungJarak($lat1, $lon1, $lat2, $lon2)
+{
+    if (!$lat1 || !$lon1) return 0;
+    $earth = 6371;
+    $dLat = deg2rad($lat2 - $lat1);
+    $dLon = deg2rad($lon2 - $lon1);
+    $a = sin($dLat / 2) * sin($dLat / 2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) * sin($dLon / 2);
+    return round($earth * (2 * atan2(sqrt($a), sqrt(1 - $a))), 2);
+}
+$jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
 ?>
 
 <!DOCTYPE html>
@@ -44,140 +63,333 @@ $res_kamar = mysqli_query($conn, $q_kamar);
 
 <head>
     <meta charset="UTF-8">
-    <title>Detail Kost - <?= $kost['nama_kost']; ?></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= $kost['nama_kost'] ?> - Detail Kost</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
     <style>
-        .hero-img {
-            width: 100%;
-            height: 400px;
-            object-fit: cover;
-            border-radius: 15px;
+        body {
+            background-color: #f4f7f9;
+            color: #2c3e50;
         }
 
-        .sticky-contact {
-            position: sticky;
-            top: 20px;
+        .gallery-container {
+            height: 400px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 8px;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .gallery-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.02);
+        }
+
+        .main-img {
+            grid-row: 1 / 3;
+        }
+
+        .card-custom {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            background: white;
+        }
+
+        #map-detail {
+            height: 250px;
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        .panorama-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 10px;
+        }
+
+        /* MODAL FULLSCREEN STYLE */
+        .modal-fullscreen .modal-body {
+            padding: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .carousel-fs-item {
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+
+        .fs-img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .carousel-caption h5 {
+            background-color: rgba(0, 0, 0, 0.6);
+            /* Warna hitam transparansi 60% */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            /* Membuat sudut membulat */
+            display: inline-block;
+            /* Agar background membungkus teks saja, bukan selebar layar */
+            backdrop-filter: blur(5px);
+            /* Efek blur di belakang teks (opsional, biar keren) */
+            margin-bottom: 20px;
         }
     </style>
 </head>
 
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-dark bg-success mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="index.php"><i class="bi bi-arrow-left"></i> Kembali</a>
+    <?php include 'navbar.php'; ?>
+
+    <main class="container my-4">
+        <div class="mb-3">
+            <h2 class="fw-bold mb-1"><?= $kost['nama_kost'] ?></h2>
+            <p class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> <?= $kost['alamat'] ?></p>
         </div>
-    </nav>
 
-    <div class="container mb-5">
-        <div class="row">
-            <div class="col-md-8">
-                <img src="https://lh3.googleusercontent.com/S_dLYzgm3N_IlPm1dO81Nc3AG_1P8-T3TIp1INDF9X_IBa-c2jOk8Ha1Zei5KoqvU2rd8VfdBuHX3Y1XePRfFBepWlqi7GhJ20qMlTZpu4KFnVmeX67rgoDUBeFJc0Q6i-0lmhKQ" class="hero-img mb-4 shadow-sm">
+        <div class="gallery-container">
+            <?php if (count($galeri_biasa) > 0): ?>
+                <img src="assets/img/galeri/<?= $galeri_biasa[0]['nama_file'] ?>" class="gallery-item main-img" onclick="bukaFullscreen(0)">
+                <?php if (isset($galeri_biasa[1])): ?>
+                    <img src="assets/img/galeri/<?= $galeri_biasa[1]['nama_file'] ?>" class="gallery-item sub-img" onclick="bukaFullscreen(1)">
+                <?php endif; ?>
+                <?php if (isset($galeri_biasa[2])): ?>
+                    <img src="assets/img/galeri/<?= $galeri_biasa[2]['nama_file'] ?>" class="gallery-item sub-img" onclick="bukaFullscreen(2)">
+                <?php endif; ?>
+            <?php else: ?>
+                <img src="https://via.placeholder.com/800x400?text=Tidak+Ada+Foto" class="gallery-item main-img">
+            <?php endif; ?>
+        </div>
 
-                <div class="card shadow-sm border-0 p-4 mb-4">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="badge bg-primary mb-2"><?= $kost['jenis_kost']; ?></span>
-                            <h2 class="fw-bold"><?= $kost['nama_kost']; ?></h2>
-                            <p class="text-muted"><i class="bi bi-geo-alt"></i> <?= $kost['alamat']; ?></p>
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-light border fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalFotoBiasa">
+                <i class="bi bi-grid-3x3-gap"></i> Lihat Semua Foto
+            </button>
+            <?php if (count($galeri_360) > 0): ?>
+                <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modal360">
+                    <i class="bi bi-arrow-repeat"></i> Virtual Tour 360°
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card card-custom p-4 mb-4">
+                    <h5 class="fw-bold mb-3">Fasilitas & Peraturan Gedung</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="fw-bold text-secondary">Fasilitas Umum</h6>
+                            <?php foreach ($fasilitas as $f) echo "<div class='small mb-1'><i class='bi bi-check-circle text-success me-1'></i> $f[nama_fasilitas]</div>"; ?>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-secondary">Peraturan</h6>
+                            <?php foreach ($peraturan as $p) echo "<div class='small mb-1 text-danger'><i class='bi bi-dot'></i> $p[nama_peraturan]</div>"; ?>
                         </div>
                     </div>
-
-                    <hr>
-                    <h5>Fasilitas Umum</h5>
-                    <div class="mb-3">
-                        <?php while ($fu = mysqli_fetch_assoc($res_f_umum)): ?>
-                            <span class="badge border text-dark fw-normal me-2 mb-2 p-2">
-                                <i class="bi bi-check-circle-fill text-success"></i> <?= $fu['nama_fasilitaS']; ?>
-                            </span>
-                        <?php endwhile; ?>
-                    </div>
-
-                    <hr>
-
-                    <h5>Peraturan Kost (Gedung)</h5>
-                    <ul class="list-unstyled">
-                        <?php
-                        // Ambil peraturan yang terhubung ke id_kost (Umum)
-                        $q_p_umum = "SELECT mp.nama_peraturan FROM rel_peraturan rp 
-                 JOIN master_peraturan mp ON rp.id_master_peraturan = mp.id_master_peraturan 
-                 WHERE rp.id_kost = '$id_kost' AND mp.kategori = 'Kost'";
-                        $res_p_umum = mysqli_query($conn, $q_p_umum);
-                        while ($p = mysqli_fetch_assoc($res_p_umum)): ?>
-                            <li class="small"><i class="bi bi-building text-success"></i> <?= $p['nama_peraturan']; ?></li>
-                        <?php endwhile; ?>
-                    </ul>
                 </div>
 
-                <h4 class="mb-3 fw-bold">Pilihan Kamar</h4>
-                <?php while ($k = mysqli_fetch_assoc($res_kamar)): ?>
-                    <div class="card shadow-sm border-0 p-3 mb-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-3">
-                                <img src="https://via.placeholder.com/200x150?text=Kamar" class="img-fluid rounded">
+                <h4 class="fw-bold mb-3">Pilihan Kamar</h4>
+                <?php foreach ($kamars as $kmr): ?>
+                    <div class="card card-custom mb-3 p-3">
+                        <div class="row g-0 align-items-center">
+                            <div class="col-md-4">
+                                <?php $img = $kmr['foto'] ? "assets/img/galeri/" . $kmr['foto'] : "https://via.placeholder.com/300x200"; ?>
+                                <img src="<?= $img ?>" class="img-fluid rounded" style="height: 140px; width:100%; object-fit: cover;">
                             </div>
-                            <div class="col-md-6">
-                                <h5 class="fw-bold text-success"><?= $k['nama_tipe_kamar']; ?></h5>
-                                <p class="small text-muted mb-2">Ukuran: <?= $k['lebar_ruangan']; ?> | <?= $k['sudah_termasuk_listrik'] ? 'Sudah Termasuk Listrik' : 'Belum Listrik'; ?></p>
-
-                                <div>
-                                    <?php
-                                    $id_k = $k['id_kamar'];
-                                    $q_fk = "SELECT mf.nama_fasilitaS FROM rel_fasilitas rf JOIN master_fasilitas mf ON rf.id_master_fasilitas = mf.id_master_fasilitaS WHERE rf.id_kamar = '$id_k'";
-                                    $res_fk = mysqli_query($conn, $q_fk);
-                                    while ($fk = mysqli_fetch_assoc($res_fk)): ?>
-                                        <span class="badge bg-light text-dark border me-1 mb-1" style="font-size: 0.75rem;"><?= $fk['nama_fasilitaS']; ?></span>
-                                    <?php endwhile; ?>
-                                </div>
+                            <div class="col-md-5 px-3">
+                                <h5 class="fw-bold mb-1"><?= $kmr['nama_tipe_kamar'] ?></h5>
+                                <p class="small text-muted mb-2"><?= $kmr['lebar_ruangan'] ?> • Listrik <?= $kmr['sudah_termasuk_listrik'] ? 'Incl.' : 'Excl.' ?></p>
+                                <a href="detail_kamar.php?id=<?= $kmr['id_kamar'] ?>" class="btn btn-outline-primary btn-sm rounded-pill stretched-link">
+                                    Lihat Detail Kamar
+                                </a>
                             </div>
-                            <div class="col-md-3 text-end">
-                                <h5 class="fw-bold text-primary mb-0">Rp <?= number_format($k['harga_per_bulan'], 0, ',', '.'); ?></h5>
-                                <small class="text-muted d-block mb-3">per bulan</small>
-
-                                <a href="detail_kamar.php?id=<?= $k['id_kamar']; ?>" class="btn btn-outline-primary btn-sm w-100 mb-2">
-                                    <i class="bi bi-info-circle"></i> Lihat Detail Kamar
-                                </a>
-
-                                <a href="booking.php?id=<?= $k['id_kamar']; ?>" class="btn btn-success btn-sm w-100 <?= $k['stok_kamar'] <= 0 ? 'disabled' : ''; ?>">
-                                    Pesan Kamar
-                                </a>
+                            <div class="col-md-3 text-end border-start ps-3">
+                                <h5 class="fw-bold text-primary">Rp <?= number_format($kmr['harga_per_bulan'], 0, ',', '.') ?></h5>
+                                <small class="text-muted">/ bulan</small>
                             </div>
                         </div>
                     </div>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </div>
 
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 p-4 sticky-contact">
-                    <h5 class="fw-bold mb-3">Informasi Pemilik</h5>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
-                            <i class="bi bi-person-fill fs-4"></i>
+            <div class="col-lg-4">
+                <div class="card card-custom p-4 sticky-top" style="top:90px">
+                    <h6 class="fw-bold mb-2">Lokasi</h6>
+                    <?php if ($kost['latitude']): ?>
+                        <div id="map-detail" class="mb-3"></div>
+                        <h4 class="text-center fw-bold text-success"><?= $jarak ?> Km <span class="fs-6 text-muted fw-normal">ke UNU</span></h4>
+                    <?php endif; ?>
+                    <hr>
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width:40px;height:40px">
+                            <?= strtoupper(substr($kost['nama_pemilik'], 0, 1)) ?>
                         </div>
-                        <div>
-                            <h6 class="mb-0 fw-bold"><?= $kost['nama_pemilik']; ?></h6>
-                            <small class="text-muted">Pemilik Kost</small>
+                        <div class="ms-3">
+                            <p class="mb-0 fw-bold"><?= $kost['nama_pemilik'] ?></p>
+                            <small class="text-success">Pemilik Kost</small>
                         </div>
                     </div>
-                    <hr>
-                    <div class="d-grid gap-2">
-                        <?php if (isset($_SESSION['login'])): ?>
-                            <a href="https://wa.me/<?= $kost['no_hp']; ?>" target="_blank" class="btn btn-success">
-                                <i class="bi bi-whatsapp"></i> Chat via WhatsApp
-                            </a>
-                        <?php else: ?>
-                            <a href="login.php?pesan=login_dulu&next=detail_kost.php?id=<?= $id_kost; ?>" class="btn btn-outline-success">
-                                <i class="bi bi-lock"></i> Login untuk Chat
-                            </a>
-                        <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal fade" id="modalFotoBiasa" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Galeri Foto Kost</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="row g-3">
+                        <?php foreach ($galeri_biasa as $i => $ph): ?>
+                            <div class="col-md-4 col-6">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <img src="assets/img/galeri/<?= $ph['nama_file'] ?>"
+                                        class="card-img-top"
+                                        style="cursor: pointer; height: 180px; object-fit: cover;"
+                                        onclick="bukaFullscreen(<?= $i ?>)">
+
+                                    <div class="card-body p-2 text-center bg-white">
+                                        <small class="fw-bold text-dark"><?= $ph['kategori_foto'] ?></small>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="modal fade" id="modalFullscreen" tabindex="-1">
+        <div class="modal-dialog modal-fullscreen bg-dark">
+            <div class="modal-content bg-dark border-0">
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-4 z-3" data-bs-dismiss="modal"></button>
+
+                <div class="modal-body p-0">
+                    <div id="fsCarousel" class="carousel slide h-100 w-100" data-bs-interval="false">
+                        <div class="carousel-inner h-100 w-100">
+                            <?php foreach ($galeri_biasa as $idx => $g): ?>
+                                <div class="carousel-item h-100 w-100 <?= $idx == 0 ? 'active' : '' ?>">
+                                    <div class="carousel-fs-item">
+                                        <img src="assets/img/galeri/<?= $g['nama_file'] ?>" class="fs-img">
+                                        <div class="carousel-caption d-none d-md-block pb-5">
+                                            <h5><?= $g['kategori_foto'] ?></h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <button class="carousel-control-prev" type="button" data-bs-target="#fsCarousel" data-bs-slide="prev" style="width: 10%;">
+                            <span class="carousel-control-prev-icon p-3 bg-dark rounded-circle"></span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#fsCarousel" data-bs-slide="next" style="width: 10%;">
+                            <span class="carousel-control-next-icon p-3 bg-dark rounded-circle"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if (count($galeri_360) > 0): ?>
+        <div class="modal fade" id="modal360" tabindex="-1">
+            <div class="modal-dialog modal-fullscreen">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title fw-bold text-white">Virtual Tour 360°</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <?php foreach ($galeri_360 as $idx => $ph): ?>
+                            <div class="mb-4">
+                                <h6 class="text-white bg-dark"><?= $ph['kategori_foto'] ?></h6>
+                                <div id="pano-<?= $idx ?>" class="panorama-container"></div>
+                                <script>
+                                    setTimeout(() => {
+                                        pannellum.viewer('pano-<?= $idx ?>', {
+                                            "type": "equirectangular",
+                                            "panorama": "assets/img/galeri/<?= $ph['nama_file'] ?>",
+                                            "autoLoad": true
+                                        });
+                                    }, 1000);
+                                </script>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($kost['latitude']): ?>
+        <script>
+            var map = L.map('map-detail', {
+                center: [<?= $kost['latitude'] ?>, <?= $kost['longitude'] ?>],
+                zoom: 15,
+                zoomControl: false,
+                dragging: false
+            });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            L.marker([<?= $kost['latitude'] ?>, <?= $kost['longitude'] ?>]).addTo(map);
+        </script>
+    <?php endif; ?>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        var modalFsEl = document.getElementById('modalFullscreen');
+        var modalFs = new bootstrap.Modal(modalFsEl);
+        var sliderEl = document.getElementById('fsCarousel');
+        var bsCarousel = new bootstrap.Carousel(sliderEl, {
+            interval: false
+        });
+
+        function bukaFullscreen(idx) {
+            // Tutup modal grid jika sedang terbuka (misal user klik foto dari dalam modal grid)
+            var modalGridEl = document.getElementById('modalFotoBiasa');
+            var modalGrid = bootstrap.Modal.getInstance(modalGridEl);
+            if (modalGrid) modalGrid.hide();
+
+            modalFs.show();
+            // Beri jeda sedikit agar modal render dulu, baru pindah slide (Fix Bug Bootstrap)
+            setTimeout(() => {
+                bsCarousel.to(idx);
+            }, 250);
+        }
+    </script>
 </body>
 
 </html>

@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# 1. Jika user mengakses file.php, redirect ke /file (untuk SEO)
+# Tambahkan QSA agar parameter tidak hilang saat redirect
+RewriteCond %{THE_REQUEST} /([^.]+)\.php [NC]
+RewriteRule ^ /%1 [NC,L,R,QSA]
+
+# 2. Jika user mengakses /file, buka file.php secara internal
+# PERBAIKAN UTAMA ADA DI SINI (Penambahan QSA)
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*?)/?$ $1.php [NC,L,QSA]
+
+# 3. Mencegah akses list folder
+Options -Indexes

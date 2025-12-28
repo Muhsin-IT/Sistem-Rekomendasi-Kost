@@ -2,11 +2,12 @@
 session_start();
 include 'koneksi.php';
 
-// Ambil data kost beserta harga terendah dari tabel kamar
-$query = "SELECT kost.*, MIN(kamar.harga_per_bulan) as harga_min 
-          FROM kost 
-          LEFT JOIN kamar ON kost.id_kost = kamar.id_kost 
-          GROUP BY kost.id_kost";
+// Query Kost
+$query = "SELECT k.*, 
+          (SELECT MIN(harga_per_bulan) FROM kamar WHERE id_kost = k.id_kost) as harga_min,
+          (SELECT nama_file FROM galeri WHERE id_kost = k.id_kost AND kategori_foto = 'Tampak Depan' LIMIT 1) as foto_depan
+          FROM kost k
+          ORDER BY k.id_kost DESC LIMIT 6"; // Dilimit 6 agar tidak terlalu panjang di home
 $result = mysqli_query($conn, $query);
 ?>
 
@@ -16,101 +17,254 @@ $result = mysqli_query($conn, $query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kost UNU Yogyakarta - Cari Kost Mahasiswa</title>
+    <title>RadenStay - Cari Kost Dekat UNU Jogja</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
     <style>
+        /* CSS Variables untuk Palet Warna yang Lebih Lembut */
+        :root {
+            --bg-soft: #f4f7f9;
+            /* Latar belakang abu-abu sangat muda */
+            --text-dark: #2c3e50;
+            /* Teks utama (bukan hitam pekat) */
+            --text-muted: #6c757d;
+            /* Teks sekunder */
+            --brand-blue: #0d6efd;
+            /* Biru utama */
+            --brand-orange: #fd7e14;
+            /* Oranye utama */
+        }
+
+        body {
+            background-color: var(--bg-soft);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-dark);
+        }
+
+        /* HERO SECTION RESPONSIF & LEMBUT */
         .hero-section {
-            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1555854877-bab0e564b8d5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
-            background-size: cover;
-            color: white;
-            padding: 100px 0;
+            /* Gradien yang sangat halus, tidak menyilaukan */
+            background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+            /* Padding responsif: lebih kecil di HP (py-4), besar di layar lebar (py-lg-5) */
+            padding: 3rem 0;
+            border-bottom: 1px solid #e1e5eb;
+        }
+
+        /* Judul Hero Responsif */
+        .hero-title {
+            font-weight: 800;
+            color: var(--text-dark);
+            letter-spacing: -0.5px;
+            /* Ukuran font menyesuaikan layar */
+            font-size: calc(1.8rem + 1.5vw);
+        }
+
+        /* Search Bar Responsif */
+        .search-container {
+            background: white;
+            padding: 8px;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            /* Bayangan lembut */
+            border: 1px solid #eee;
+        }
+
+        .search-input {
+            border: none;
+            box-shadow: none !important;
+            font-size: 1rem;
+        }
+
+        .search-btn {
+            background-color: var(--brand-orange);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 30px;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover {
+            background-color: #e36d0a;
+            /* Oranye sedikit lebih gelap saat hover */
+            transform: translateY(-2px);
+        }
+
+        /* CARD KOST RESPONSIF */
+        .card-kost {
+            border: none;
+            border-radius: 16px;
+            /* Bayangan sangat halus agar tidak terlihat kotor */
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            background: white;
+            overflow: hidden;
+            height: 100%;
+            /* Agar tinggi kartu sama */
         }
 
         .card-kost:hover {
             transform: translateY(-5px);
-            transition: 0.3s;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .kost-img-wrapper {
+            /* Tinggi gambar responsif: 180px di HP, 200px di Tablet ke atas */
+            height: 180px;
+            position: relative;
+        }
+
+        @media (min-width: 768px) {
+            .kost-img-wrapper {
+                height: 200px;
+            }
+        }
+
+        .kost-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .badge-tipe {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Harga yang lebih mudah dilihat */
+        .price-tag {
+            color: var(--brand-blue);
+            font-weight: 800;
+            font-size: 1.25rem;
+        }
+
+        /* Footer yang lebih lembut */
+        .footer {
+            background: #ffffff;
+            border-top: 1px solid #eef2f7;
+            color: var(--text-muted);
         }
     </style>
 </head>
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="#"><b>KOST UNU</b></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link active" href="index.php">Jelajah</a></li>
-                    <?php if (isset($_SESSION['login'])): ?>
-                        <li class="nav-item"><a class="nav-link" href="<?= $_SESSION['role'] ?>/dashboard.php">Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link btn btn-danger btn-sm text-white ms-lg-2" href="logout.php">Logout</a></li>
-                    <?php else: ?>
-                        <li class="nav-item"><a class="nav-link" href="login.php">Login</a></li>
-                        <li class="nav-item"><a class="nav-link btn btn-light text-success btn-sm ms-lg-2" href="daftar.php">Daftar</a></li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include 'navbar.php'; ?>
 
-    <header class="hero-section text-center">
-        <div class="container">
-            <h1 class="display-4 fw-bold">Cari Kost Dekat UNU Yogyakarta</h1>
-            <p class="lead">Temukan hunian nyaman, aman, dan sesuai budget mahasiswa.</p>
-            <div class="row justify-content-center mt-4">
-                <div class="col-md-6">
-                    <form action="search.php" method="GET" class="d-flex">
-                        <input class="form-control me-2 py-3" type="search" placeholder="Cari lokasi atau nama kost..." name="keyword">
-                        <button class="btn btn-warning px-4" type="submit">Cari</button>
-                    </form>
+    <header class="hero-section text-center text-lg-start">
+        <div class="container py-lg-4">
+            <div class="row justify-content-center align-items-center gx-lg-5">
+                <div class="col-lg-7 order-2 order-lg-1">
+                    <h1 class="hero-title mb-3">Hunian Nyaman Mahasiswa <span class="text-primary">UNU Jogja</span></h1>
+                    <p class="lead text-muted mb-4" style="font-weight: 400;">Temukan kost strategis, fasilitas lengkap, dan harga yang pas di kantong mahasiswa. Mulai pencarianmu sekarang!</p>
+
+                    <div class="search-container d-inline-block w-100" style="max-width: 550px;">
+                        <form action="search" method="GET" class="d-flex align-items-center">
+                            <i class="bi bi-search text-muted ms-3 fs-5"></i>
+                            <input class="form-control search-input ps-3" type="search" placeholder="Cari nama kost atau area..." name="keyword" required>
+                            <button class="btn btn-warning text-white fw-bold search-btn" type="submit">CARI</button>
+                        </form>
+                    </div>
+
+                    <div class="mt-4 text-muted small">
+                        <i class="bi bi-info-circle me-1"></i> Populer: "Kost Putra", "Dekat Kampus", "Kamar Mandi Dalam"
+                    </div>
+                </div>
+
+                <div class="col-lg-5 order-1 order-lg-2 mb-4 mb-lg-0 d-none d-md-block">
+                    <img src="https://img.freepik.com/free-vector/college-campus-concept-illustration_114360-1050.jpg?w=740&t=st=1703604000~exp=1703604600~hmac=f20c10..." alt="Ilustrasi Mahasiswa" class="img-fluid rounded-4 shadow-sm" style="opacity: 0.9;">
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Rekomendasi Kost Terpopuler</h2>
-            <a href="rekomendasi_saw.php" class="btn btn-outline-success"><i class="bi bi-stars"></i> Gunakan Rekomendasi SAW</a>
+    <main class="container my-5 py-3">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+            <div>
+                <h3 class="fw-bold mb-1">Rekomendasi Kost Terbaru</h3>
+                <p class="text-muted mb-0">Pilihan tempat tinggal yang baru ditambahkan.</p>
+            </div>
+            <a href="rekomendasi_saw" class="btn btn-outline-primary rounded-pill px-4 fw-semibold">
+                <i class="bi bi-stars me-1"></i> Coba Rekomendasi Pintar (SAW)
+            </a>
         </div>
 
-        <div class="row">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             <?php while ($row = mysqli_fetch_assoc($result)): ?>
-                <div class="col-md-4 mb-4">
-                    <div class="card card-kost shadow-sm h-100">
-                        <img src="https://via.placeholder.com/400x250?text=Foto+Kost" class="card-img-top" alt="Kost">
-                        <div class="card-body">
-                            <div class="mb-2">
-                                <span class="badge bg-<?= $row['jenis_kost'] == 'Putra' ? 'primary' : ($row['jenis_kost'] == 'Putri' ? 'danger' : 'info') ?>">
-                                    <?= $row['jenis_kost'] ?>
-                                </span>
-                            </div>
-                            <h5 class="card-title"><?= $row['nama_kost'] ?></h5>
-                            <p class="text-muted mb-2 small"><i class="bi bi-geo-alt-fill"></i> <?= $row['alamat'] ?></p>
-                            <h6 class="text-success fw-bold"><?php if ($row['harga_min']): ?>
-                                    Rp <?= number_format($row['harga_min'], 0, ',', '.') ?>
+                <?php $imgSrc = $row['foto_depan'] ? "assets/img/galeri/" . $row['foto_depan'] : "https://via.placeholder.com/400x250?text=Belum+Ada+Foto"; ?>
+
+                <div class="col">
+                    <div class="card card-kost h-100">
+                        <div class="kost-img-wrapper">
+                            <img src="<?= $imgSrc ?>" class="kost-img" alt="<?= $row['nama_kost'] ?>">
+                            <span class="badge bg-white text-dark badge-tipe shadow-sm">
+                                <?php if ($row['jenis_kost'] == 'Putra'): ?>
+                                    <i class="bi bi-gender-male text-primary"></i> Putra
+                                <?php elseif ($row['jenis_kost'] == 'Putri'): ?>
+                                    <i class="bi bi-gender-female text-danger"></i> Putri
                                 <?php else: ?>
-                                    <span class="text-muted small">Harga N/A</span>
+                                    <i class="bi bi-gender-ambiguous text-success"></i> Campur
                                 <?php endif; ?>
-                            </h6>
-                            <hr>
-                            <div class="d-grid">
-                                <a href="detail_kost.php?id=<?= $row['id_kost'] ?>" class="btn btn-outline-success">Lihat Detail</a>
+                            </span>
+                        </div>
+
+                        <div class="card-body p-4 d-flex flex-column">
+                            <h5 class="card-title fw-bold text-dark mb-2"><?= substr($row['nama_kost'], 0, 25) ?><?= strlen($row['nama_kost']) > 25 ? '...' : '' ?></h5>
+
+                            <p class="text-muted small mb-3 flex-grow-1">
+                                <i class="bi bi-geo-alt me-1 text-danger opacity-75"></i>
+                                <?= substr($row['alamat'], 0, 45) ?>...
+                            </p>
+
+                            <hr class="my-3 border-light">
+
+                            <div class="d-flex justify-content-between align-items-end">
+                                <div>
+                                    <small class="text-muted d-block fw-semibold" style="font-size: 0.8rem;">Mulai dari</small>
+                                    <?php if ($row['harga_min']): ?>
+                                        <span class="price-tag">Rp <?= number_format($row['harga_min'], 0, ',', '.') ?></span>
+                                        <small class="text-muted">/bln</small>
+                                    <?php else: ?>
+                                        <span class="text-danger fw-bold small">Penuh / Kontak Pemilik</span>
+                                    <?php endif; ?>
+                                </div>
+                                <a href="detail_kost?id=<?= $row['id_kost'] ?>" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" style="font-size: 0.9rem;">
+                                    Detail <i class="bi bi-chevron-right ms-1" style="font-size: 0.8rem;"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
             <?php endwhile; ?>
+
+            <?php if (mysqli_num_rows($result) == 0): ?>
+                <div class="col-12 text-center py-5 text-muted">
+                    <img src="https://cdn-icons-png.flaticon.com/512/7465/7465691.png" height="100" class="mb-3 opacity-50">
+                    <h5>Belum ada data kost yang tersedia.</h5>
+                </div>
+            <?php endif; ?>
         </div>
     </main>
 
-    <footer class="bg-dark text-white py-4 mt-5">
-        <div class="container text-center">
-            <p>&copy; 2025 Kost UNU Yogyakarta - Muhsin Project</p>
+    <footer class="footer py-4 text-center text-lg-start">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 text-center text-lg-start mb-3 mb-lg-0">
+                    <img src="assets/img/logo/radenStay.png" height="35" class="mb-3 opacity-75">
+                    <p class="small mb-0">Platform pencarian kost modern khusus untuk mahasiswa Universitas Nahdlatul Ulama Yogyakarta. Dibuat dengan sepenuh AI.</p>
+                </div>
+                <div class="col-lg-6 text-center text-lg-end">
+                    <p class="small mb-0">&copy; <?= date('Y') ?> RadenStay. All rights reserved.</p>
+                </div>
+            </div>
         </div>
     </footer>
 

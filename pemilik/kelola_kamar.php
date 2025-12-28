@@ -4,13 +4,13 @@ include '../koneksi.php';
 
 // Proteksi login
 if (!isset($_SESSION['login']) || $_SESSION['role'] !== 'pemilik') {
-    header("Location: ../login.php");
+    header("Location: ../login");
     exit;
 }
 
 // Ambil ID Kost dari URL
 if (!isset($_GET['id'])) {
-    header("Location: dashboard.php");
+    header("Location: dashboard");
     exit;
 }
 
@@ -28,7 +28,7 @@ $res_kamar = mysqli_query($conn, $query_kamar);
 if (isset($_GET['hapus'])) {
     $id_hapus = $_GET['hapus'];
     mysqli_query($conn, "DELETE FROM kamar WHERE id_kamar = '$id_hapus'");
-    echo "<script>alert('Kamar dihapus!'); window.location='kelola_kamar.php?id=$id_kost';</script>";
+    echo "<script>alert('Kamar dihapus!'); window.location='kelola_kamar?id=$id_kost';</script>";
 }
 ?>
 
@@ -46,14 +46,14 @@ if (isset($_GET['hapus'])) {
 
     <nav class="navbar navbar-dark bg-success mb-4">
         <div class="container">
-            <a class="navbar-brand" href="dashboard.php"><i class="bi bi-arrow-left"></i> Kembali ke Dashboard</a>
+            <a class="navbar-brand" href="dashboard"><i class="bi bi-arrow-left"></i> Kembali ke Dashboard</a>
         </div>
     </nav>
 
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4>Kelola Tipe Kamar: <strong><?= $data_kost['nama_kost']; ?></strong></h4>
-            <a href="tambah_kamar.php?id_kost=<?= $id_kost; ?>" class="btn btn-primary">
+            <a href="tambah_kamar?id_kost=<?= $id_kost; ?>" class="btn btn-primary">
                 <i class="bi bi-plus-lg"></i> Tambah Tipe Kamar Baru
             </a>
         </div>
@@ -102,10 +102,10 @@ if (isset($_GET['hapus'])) {
                             </div>
 
                             <div class="mt-4 d-flex gap-2">
-                                <a href="edit_kamar.php?id=<?= $k['id_kamar']; ?>" class="btn btn-sm btn-outline-primary w-100">
+                                <a href="edit_kamar?id=<?= $k['id_kamar']; ?>" class="btn btn-sm btn-outline-primary w-100">
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
-                                <a href="kelola_kamar.php?id=<?= $id_kost; ?>&hapus=<?= $k['id_kamar']; ?>"
+                                <a href="kelola_kamar?id=<?= $id_kost; ?>&hapus=<?= $k['id_kamar']; ?>"
                                     class="btn btn-sm btn-outline-danger w-100"
                                     onclick="return confirm('Hapus tipe kamar ini?')">
                                     <i class="bi bi-trash"></i> Hapus

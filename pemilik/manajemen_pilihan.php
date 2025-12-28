@@ -6,87 +6,84 @@ if (!isset($_SESSION['login']) || $_SESSION['role'] !== 'pemilik') {
     header("Location: ../login.php");
     exit;
 }
-// -------------------------------------------------------------------------------------------------------
-// --- LOGIKA TAMBAH FASILITAS MASSAL ---
-if (isset($_POST['tambah_fasilitaS'])) {
-    $input_fasilitas = $_POST['nama_fasilitas'];
-    $kategori = $_POST['kategori_f'];
 
-    $data_fasilitas = explode(',', $input_fasilitas);
-    $berhasil = 0;
+$id_user_login = $_SESSION['id_user'];
 
-    foreach ($data_fasilitas as $f) {
-        $f_clean = trim($f);
-        if (!empty($f_clean)) {
-            $query = "INSERT INTO master_fasilitas (nama_fasilitas, kategori) VALUES ('$f_clean', '$kategori')";
-            if (mysqli_query($conn, $query)) {
-                $berhasil++;
-            }
-        }
-    }
-    if ($berhasil > 0) {
-        echo "<script>alert('$berhasil fasilitas berhasil ditambahkan!'); window.location='manajemen_pilihan.php';</script>";
-    }
-}
+// ==========================================
+// LOGIKA PERATURAN (TAMBAH, EDIT, HAPUS)
+// ==========================================
 
-// --- LOGIKA EDIT FASILITAS ---
-if (isset($_POST['edit_fasilitas'])) {
-    $id_f = $_POST['id_master_fasilitas'];
-    $nama_f = mysqli_real_escape_string($conn, $_POST['nama_fasilitas']);
-    $kat_f = $_POST['kategori_f'];
-
-    mysqli_query($conn, "UPDATE master_fasilitas SET nama_fasilitas = '$nama_f', kategori = '$kat_f' WHERE id_master_fasilitas = '$id_f'");
-    echo "<script>alert('Fasilitas diperbarui!'); window.location='manajemen_pilihan.php';</script>";
-}
-// -------------------------------------------------------------------------------------------------------
-// --- LOGIKA TAMBAH PERATURAN MASSAL ---
+// Tambah Massal Peraturan
 if (isset($_POST['tambah_peraturan'])) {
-    $input_peraturan = $_POST['nama_peraturan']; // Mengambil string (ex: "No Smoking, No Pet, Max 1 Person")
-    $kategori = $_POST['kategori_p'];
-
-    // Memecah string berdasarkan koma
-    $data_peraturan = explode(',', $input_peraturan);
-    $berhasil = 0;
-
-    foreach ($data_peraturan as $p) {
-        $p_clean = trim($p); // Menghilangkan spasi di awal/akhir kalimat
+    $input = $_POST['nama_peraturan'];
+    $kat = $_POST['kategori_p'];
+    $data = explode(',', $input);
+    foreach ($data as $p) {
+        $p_clean = mysqli_real_escape_string($conn, trim($p));
         if (!empty($p_clean)) {
-            $query = "INSERT INTO master_peraturan (nama_peraturan, kategori) VALUES ('$p_clean', '$kategori')";
-            if (mysqli_query($conn, $query)) {
-                $berhasil++;
-            }
+            mysqli_query($conn, "INSERT INTO master_peraturan (nama_peraturan, kategori, id_pemilik) VALUES ('$p_clean', '$kat', '$id_user_login')");
         }
     }
-
-    if ($berhasil > 0) {
-        echo "<script>alert('$berhasil peraturan berhasil ditambahkan!'); window.location='manajemen_pilihan.php';</script>";
-    } else {
-        echo "<script>alert('Gagal menambah peraturan. Cek apakah peraturan sudah ada!');</script>";
-    }
+    header("Location: manajemen_pilihan.php?pesan=sukses");
+    exit;
 }
 
-// --- LOGIKA HAPUS PERATURAN ---
+// Edit Peraturan
+if (isset($_POST['update_peraturan'])) {
+    $id = $_POST['id_peraturan'];
+    $nama = mysqli_real_escape_string($conn, $_POST['nama_peraturan']);
+    $kat = $_POST['kategori_p'];
+    mysqli_query($conn, "UPDATE master_peraturan SET nama_peraturan = '$nama', kategori = '$kat' WHERE id_master_peraturan = '$id' AND id_pemilik = '$id_user_login'");
+    header("Location: manajemen_pilihan.php?pesan=updated");
+    exit;
+}
+
+// Hapus Peraturan
 if (isset($_GET['hapus_p'])) {
-    $id_p = $_GET['hapus_p'];
-    $delete = mysqli_query($conn, "DELETE FROM master_peraturan WHERE id_master_peraturan = '$id_p'");
-    if ($delete) {
-        echo "<script>alert('Peraturan dihapus!'); window.location='manajemen_pilihan.php';</script>";
-    }
+    $id = $_GET['hapus_p'];
+    mysqli_query($conn, "DELETE FROM master_peraturan WHERE id_master_peraturan = '$id' AND id_pemilik = '$id_user_login'");
+    header("Location: manajemen_pilihan.php");
+    exit;
 }
 
-// --- LOGIKA EDIT PERATURAN ---
-if (isset($_POST['edit_peraturan'])) {
-    $id_edit = $_POST['id_master_peraturan'];
-    $nama_edit = mysqli_real_escape_string($conn, $_POST['nama_peraturan']);
-    $kat_edit = $_POST['kategori_p'];
+// ==========================================
+// LOGIKA FASILITAS (TAMBAH, EDIT, HAPUS)
+// ==========================================
 
-    $update = mysqli_query($conn, "UPDATE master_peraturan SET nama_peraturan = '$nama_edit', kategori = '$kat_edit' WHERE id_master_peraturan = '$id_edit'");
-    if ($update) {
-        echo "<script>alert('Peraturan diperbarui!'); window.location='manajemen_pilihan.php';</script>";
+// Tambah Massal Fasilitas
+if (isset($_POST['tambah_fasilitaS'])) {
+    $input = $_POST['nama_fasilitas'];
+    $kat = $_POST['kategori_f'];
+    $data = explode(',', $input);
+    foreach ($data as $f) {
+        $f_clean = mysqli_real_escape_string($conn, trim($f));
+        if (!empty($f_clean)) {
+            mysqli_query($conn, "INSERT INTO master_fasilitas (nama_fasilitas, kategori, id_pemilik) VALUES ('$f_clean', '$kat', '$id_user_login')");
+        }
     }
+    header("Location: manajemen_pilihan.php?pesan=sukses");
+    exit;
+}
+
+// Edit Fasilitas
+if (isset($_POST['update_fasilitas'])) {
+    $id = $_POST['id_fasilitas'];
+    $nama = mysqli_real_escape_string($conn, $_POST['nama_fasilitas']);
+    $kat = $_POST['kategori_f'];
+    mysqli_query($conn, "UPDATE master_fasilitas SET nama_fasilitas = '$nama', kategori = '$kat' WHERE id_master_fasilitas = '$id' AND id_pemilik = '$id_user_login'");
+    header("Location: manajemen_pilihan.php?pesan=updated");
+    exit;
+}
+
+// Hapus Fasilitas
+if (isset($_GET['hapus_f'])) {
+    $id = $_GET['hapus_f'];
+    mysqli_query($conn, "DELETE FROM master_fasilitas WHERE id_master_fasilitas = '$id' AND id_pemilik = '$id_user_login'");
+    header("Location: manajemen_pilihan.php");
+    exit;
 }
 ?>
-<!-- ----------------------------------------------------------------------------------------------------------------------------- -->
+
 <!DOCTYPE html>
 <html lang="id">
 
@@ -95,20 +92,18 @@ if (isset($_POST['edit_peraturan'])) {
     <title>Manajemen Pilihan - Kost UNU</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #f4f7f6;
         }
 
-        /* Style Sidebar agar konsisten */
         .sidebar {
             min-height: 100vh;
             background: #198754;
             color: white;
             padding: 20px;
             position: fixed;
-            width: inherit;
+            width: 16.6%;
         }
 
         .sidebar a {
@@ -118,16 +113,16 @@ if (isset($_POST['edit_peraturan'])) {
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 5px;
-            transition: 0.3s;
-        }
-
-        .sidebar a:hover {
-            background: rgba(255, 255, 255, 0.1);
         }
 
         .content-area {
-            margin-left: 16.666667%;
+            margin-left: 17%;
             padding: 30px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
         }
     </style>
 </head>
@@ -139,199 +134,142 @@ if (isset($_POST['edit_peraturan'])) {
             <?php include 'sidebar.php'; ?>
 
             <div class="col-md-10 content-area">
-                <h2 class="mb-4">Manajemen Peraturan</h2>
+                <h3 class="fw-bold mb-4 text-success">Pusat Kendali Fasilitas & Peraturan</h3>
 
-                <div class="row">
+                <div class="row mb-5">
                     <div class="col-md-4">
-                        <div class="card shadow-sm border-0 mb-4">
-                            <div class="card-header bg-primary text-white">Tambah Peraturan Baru</div>
-                            <div class="card-body">
-                                <form method="POST">
-                                    <div class="mb-3">
-                                        <label class="form-label">Nama Peraturan</label>
-                                        <textarea name="nama_peraturan" class="form-control" placeholder="Contoh: Akses 24 Jam, Dilarang Merokok, Tidak Bawa Hewan" rows="3" required></textarea>
-                                        <small class="text-muted">Pisahkan dengan koma (,) untuk input massal.</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Kategori</label>
-                                        <select name="kategori_p" class="form-select">
-                                            <option value="Kost">Peraturan Kost (Gedung)</option>
-                                            <option value="Kamar">Peraturan Khusus Kamar</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" name="tambah_peraturan" class="btn btn-primary w-100">Tambah</button>
-                                </form>
-                            </div>
+                        <div class="card shadow-sm p-3 border-start border-success border-4">
+                            <h6>Tambah Fasilitas</h6>
+                            <form method="POST">
+                                <textarea name="nama_fasilitas" class="form-control mb-2" placeholder="Contoh: WiFi, AC, TV (pisahkan dengan koma)" rows="3" required></textarea>
+                                <select name="kategori_f" class="form-select mb-2">
+                                    <option value="Kamar">Kamar</option>
+                                    <option value="Umum">Umum</option>
+                                    <option value="Parkir">Parkir</option>
+                                </select>
+                                <button name="tambah_fasilitaS" class="btn btn-success w-100">Tambah</button>
+                            </form>
                         </div>
                     </div>
-
                     <div class="col-md-8">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-body">
-                                <table class="table table-hover align-middle">
-                                    <thead class="table-light">
+                        <div class="card shadow-sm p-3">
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nama Fasilitas</th>
+                                        <th>Kategori</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $fs = mysqli_query($conn, "SELECT * FROM master_fasilitas WHERE id_pemilik IS NULL OR id_pemilik = '$id_user_login'");
+                                    while ($f = mysqli_fetch_assoc($fs)): ?>
                                         <tr>
-                                            <th>Peraturan</th>
-                                            <th>Kategori</th>
-                                            <th class="text-center">Aksi</th>
+                                            <td><?= $f['nama_fasilitas']; ?></td>
+                                            <td><span class="badge bg-light text-dark border"><?= $f['kategori']; ?></span></td>
+                                            <td><?= ($f['id_pemilik'] == null) ? '<small class="text-muted">Sistem</small>' : '<small class="text-success">Milik Saya</small>'; ?></td>
+                                            <td>
+                                                <?php if ($f['id_pemilik'] == $id_user_login): ?>
+                                                    <button class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#modalF<?= $f['id_master_fasilitas']; ?>"><i class="bi bi-pencil"></i></button>
+                                                    <a href="?hapus_f=<?= $f['id_master_fasilitas']; ?>" class="text-danger" onclick="return confirm('Hapus?')"><i class="bi bi-trash"></i></a>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php
-                                        $ps = mysqli_query($conn, "SELECT * FROM master_peraturan");
-                                        while ($p = mysqli_fetch_assoc($ps)): ?>
-                                            <tr>
-                                                <td><?= $p['nama_peraturan']; ?></td>
-                                                <td>
-                                                    <span class="badge <?= $p['kategori'] == 'Kost' ? 'bg-info' : 'bg-warning text-dark'; ?>">
-                                                        <?= $p['kategori']; ?>
-                                                    </span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal<?= $p['id_master_peraturan']; ?>">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <a href="manajemen_pilihan.php?hapus_p=<?= $p['id_master_peraturan']; ?>"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        onclick="return confirm('Hapus peraturan ini?')">
-                                                        <i class="bi bi-trash"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-
-                                            <div class="modal fade" id="editModal<?= $p['id_master_peraturan']; ?>" tabindex="-1">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
-                                                        <form method="POST">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Edit Peraturan</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <input type="hidden" name="id_master_peraturan" value="<?= $p['id_master_peraturan']; ?>">
-                                                                <div class="mb-3">
-                                                                    <label>Nama Peraturan</label>
-                                                                    <input type="text" name="nama_peraturan" class="form-control" value="<?= $p['nama_peraturan']; ?>" required>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label>Kategori</label>
-                                                                    <select name="kategori_p" class="form-select">
-                                                                        <option value="Kost" <?= $p['kategori'] == 'Kost' ? 'selected' : ''; ?>>Kost (Gedung)</option>
-                                                                        <option value="Kamar" <?= $p['kategori'] == 'Kamar' ? 'selected' : ''; ?>>Khusus Kamar</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="submit" name="edit_peraturan" class="btn btn-primary">Simpan</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
+                                        <div class="modal fade" id="modalF<?= $f['id_master_fasilitas']; ?>" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form method="POST">
+                                                        <div class="modal-header">
+                                                            <h5>Edit Fasilitas</h5>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="id_fasilitas" value="<?= $f['id_master_fasilitas']; ?>">
+                                                            <input type="text" name="nama_fasilitas" class="form-control mb-2" value="<?= $f['nama_fasilitas']; ?>">
+                                                            <select name="kategori_f" class="form-select">
+                                                                <option value="Kamar" <?= $f['kategori'] == 'Kamar' ? 'selected' : ''; ?>>Kamar</option>
+                                                                <option value="Umum" <?= $f['kategori'] == 'Umum' ? 'selected' : ''; ?>>Umum</option>
+                                                                <option value="Parkir" <?= $f['kategori'] == 'Parkir' ? 'selected' : ''; ?>>Parkir</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="modal-footer"><button type="submit" name="update_fasilitas" class="btn btn-success">Update</button></div>
+                                                    </form>
                                                 </div>
                                             </div>
-                                        <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </div>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="row mt-5">
-                    <div class="col-md-12">
-                        <hr>
-                        <h4 class="mb-4 text-success"><i class="bi bi-tools"></i> Manajemen Fasilitas</h4>
-                    </div>
+                <hr>
 
+                <div class="row">
                     <div class="col-md-4">
-                        <div class="card shadow-sm border-0 mb-4">
-                            <div class="card-header bg-success text-white">Tambah Fasilitas Baru</div>
-                            <div class="card-body">
-                                <form method="POST">
-                                    <div class="mb-3">
-                                        <label class="form-label">Nama Fasilitas</label>
-                                        <textarea name="nama_fasilitas" class="form-control" placeholder="contoh: AC, WiFi, Kasur, Kamar Mandi Dalam" rows="3" required></textarea>
-                                        <small class="text-muted">Pisahkan dengan koma (,) untuk input massal.</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Kategori</label>
-                                        <select name="kategori_f" class="form-select">
-                                            <option value="Kamar">Fasilitas Kamar (Privat)</option>
-                                            <option value="Umum">Fasilitas Umum (Bersama)</option>
-                                            <option value="Parkir">Fasilitas Parkir</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" name="tambah_fasilitaS" class="btn btn-success w-100">Tambah Fasilitas</button>
-                                </form>
-                            </div>
+                        <div class="card shadow-sm p-3 border-start border-danger border-4">
+                            <h6>Tambah Peraturan</h6>
+                            <form method="POST">
+                                <textarea name="nama_peraturan" class="form-control mb-2" placeholder="contoh :Dilarang Berisik, No Smoking (pisahkan dengan koma)" rows="3" required></textarea>
+                                <select name="kategori_p" class="form-select mb-2">
+                                    <option value="Kost">Gedung</option>
+                                    <option value="Kamar">Kamar</option>
+                                </select>
+                                <button name="tambah_peraturan" class="btn btn-danger w-100">Tambah</button>
+                            </form>
                         </div>
                     </div>
-
                     <div class="col-md-8">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-body">
-                                <table class="table table-hover align-middle">
-                                    <thead class="table-light">
+                        <div class="card shadow-sm p-3">
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nama Peraturan</th>
+                                        <th>Kategori</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $ps = mysqli_query($conn, "SELECT * FROM master_peraturan WHERE id_pemilik IS NULL OR id_pemilik = '$id_user_login'");
+                                    while ($p = mysqli_fetch_assoc($ps)): ?>
                                         <tr>
-                                            <th>Nama Fasilitas</th>
-                                            <th>Kategori</th>
-                                            <th class="text-center">Aksi</th>
+                                            <td><?= $p['nama_peraturan']; ?></td>
+                                            <td><span class="badge bg-light text-dark border"><?= $p['kategori']; ?></span></td>
+                                            <td><?= ($p['id_pemilik'] == null) ? '<small class="text-muted">Sistem</small>' : '<small class="text-danger">Milik Saya</small>'; ?></td>
+                                            <td>
+                                                <?php if ($p['id_pemilik'] == $id_user_login): ?>
+                                                    <button class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#modalP<?= $p['id_master_peraturan']; ?>"><i class="bi bi-pencil"></i></button>
+                                                    <a href="?hapus_p=<?= $p['id_master_peraturan']; ?>" class="text-danger" onclick="return confirm('Hapus?')"><i class="bi bi-trash"></i></a>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php
-                                        $fs = mysqli_query($conn, "SELECT * FROM master_fasilitas ORDER BY kategori DESC");
-                                        while ($f = mysqli_fetch_assoc($fs)): ?>
-                                            <tr>
-                                                <td><?= $f['nama_fasilitas']; ?></td>
-                                                <td>
-                                                    <span class="badge bg-light text-dark border">
-                                                        <i class="bi bi-tag"></i> <?= $f['kategori']; ?>
-                                                    </span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#editFasilitas<?= $f['id_master_fasilitas']; ?>">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    <a href="manajemen_pilihan.php?hapus_f=<?= $f['id_master_fasilitas']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus fasilitas ini?')">
-                                                        <i class="bi bi-trash"></i>
-                                                    </a>
-                                                </td>
-                                            </tr>
-
-                                            <div class="modal fade" id="editFasilitas<?= $f['id_master_fasilitas']; ?>" tabindex="-1">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
-                                                        <form method="POST">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Edit Fasilitas</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <input type="hidden" name="id_master_fasilitas" value="<?= $f['id_master_fasilitas']; ?>">
-                                                                <div class="mb-3">
-                                                                    <label>Nama Fasilitas</label>
-                                                                    <input type="text" name="nama_fasilitas" class="form-control" value="<?= $f['nama_fasilitas']; ?>" required>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label>Kategori</label>
-                                                                    <select name="kategori_f" class="form-select">
-                                                                        <option value="Kamar" <?= $f['kategori'] == 'Kamar' ? 'selected' : ''; ?>>Kamar (Privat)</option>
-                                                                        <option value="Umum" <?= $f['kategori'] == 'Umum' ? 'selected' : ''; ?>>Umum (Bersama)</option>
-                                                                        <option value="Parkir" <?= $f['kategori'] == 'Parkir' ? 'selected' : ''; ?>>Parkir</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="submit" name="edit_fasilitas" class="btn btn-success">Simpan</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
+                                        <div class="modal fade" id="modalP<?= $p['id_master_peraturan']; ?>" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form method="POST">
+                                                        <div class="modal-header">
+                                                            <h5>Edit Peraturan</h5>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="id_peraturan" value="<?= $p['id_master_peraturan']; ?>">
+                                                            <input type="text" name="nama_peraturan" class="form-control mb-2" value="<?= $p['nama_peraturan']; ?>">
+                                                            <select name="kategori_p" class="form-select">
+                                                                <option value="Kost" <?= $p['kategori'] == 'Kost' ? 'selected' : ''; ?>>Gedung</option>
+                                                                <option value="Kamar" <?= $p['kategori'] == 'Kamar' ? 'selected' : ''; ?>>Kamar</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="modal-footer"><button type="submit" name="update_peraturan" class="btn btn-danger">Update</button></div>
+                                                    </form>
                                                 </div>
                                             </div>
-                                        <?php endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </div>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
