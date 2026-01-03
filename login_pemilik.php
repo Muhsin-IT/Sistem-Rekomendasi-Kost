@@ -20,6 +20,18 @@ if (isset($_POST['login'])) {
 
                 header("Location: pemilik/dashboard.php");
                 exit;
+            } elseif ($row['role'] == 'adminsuper') {
+                $_SESSION['login'] = true;
+                $_SESSION['id_user'] = $row['id_user'];
+                $_SESSION['role'] = 'admin';
+                $_SESSION['nama_lengkap'] = $row['nama_lengkap'];
+
+                // Simpan session agar tidak hilang saat redirect
+                session_write_close();
+
+                // Arahkan ke dashboard admin
+                header("Location: admin/index.php");
+                exit;
             } else {
                 $error_msg = "Akun ini adalah Mahasiswa. Silakan login di halaman Mahasiswa.";
                 $error = true;

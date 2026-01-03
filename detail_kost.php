@@ -72,7 +72,7 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             background-color: #f4f7f9;
@@ -390,6 +390,7 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
             }, 250);
         }
     </script>
+    <?php include 'footer.php'; ?>
 </body>
 
 </html>

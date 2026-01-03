@@ -83,7 +83,7 @@ if ($is_logged_in) {
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -486,6 +486,7 @@ if ($is_logged_in) {
             modalFs.show(); // Kembali ke galeri utama
         });
     </script>
+    <?php include 'footer.php'; ?>
 </body>
 
 </html>

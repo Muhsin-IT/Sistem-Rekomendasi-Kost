@@ -20,7 +20,7 @@ $result = mysqli_query($conn, $query);
     <title>RadenStay - Cari Kost Dekat UNU Jogja</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
+    <link rel="stylesheet" href="style.css">
     <style>
         /* CSS Variables untuk Palet Warna yang Lebih Lembut */
         :root {
@@ -147,11 +147,6 @@ $result = mysqli_query($conn, $query);
         }
 
         /* Footer yang lebih lembut */
-        .footer {
-            background: #ffffff;
-            border-top: 1px solid #eef2f7;
-            color: var(--text-muted);
-        }
     </style>
 </head>
 
@@ -254,19 +249,7 @@ $result = mysqli_query($conn, $query);
         </div>
     </main>
 
-    <footer class="footer py-4 text-center text-lg-start">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6 text-center text-lg-start mb-3 mb-lg-0">
-                    <img src="assets/img/logo/radenStay.png" height="35" class="mb-3 opacity-75">
-                    <p class="small mb-0">Platform pencarian kost modern khusus untuk mahasiswa Universitas Nahdlatul Ulama Yogyakarta. Dibuat dengan sepenuh AI.</p>
-                </div>
-                <div class="col-lg-6 text-center text-lg-end">
-                    <p class="small mb-0">&copy; <?= date('Y') ?> RadenStay. All rights reserved.</p>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <?php include 'footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

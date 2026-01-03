@@ -1,0 +1,5 @@
+.footer {
+            background: #ffffff;
+            border-top: 1px solid #eef2f7;
+            color: var(--text-muted);
+        }
