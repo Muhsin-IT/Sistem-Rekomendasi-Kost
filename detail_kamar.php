@@ -27,6 +27,12 @@ $galeri_semua = [];
 $q_gal = mysqli_query($conn, "SELECT * FROM galeri WHERE id_kamar='$id_kamar'");
 while ($row = mysqli_fetch_assoc($q_gal)) $galeri_semua[] = $row;
 
+$galeri_by_kategori = [];
+foreach ($galeri_semua as $idx => $foto) {
+    $kategori = $foto['kategori_foto'] ?: 'Tanpa Kategori';
+    $galeri_by_kategori[$kategori][] = $idx;
+}
+
 // 3. FASILITAS
 $fasilitas_by_cat = ['Kamar' => [], 'Kamar Mandi' => [], 'Umum' => [], 'Parkir' => []];
 $q_fk = mysqli_query($conn, "SELECT mf.nama_fasilitas, mf.kategori FROM rel_fasilitas rf JOIN master_fasilitas mf ON rf.id_master_fasilitas=mf.id_master_fasilitas WHERE rf.id_kamar='$id_kamar'");
@@ -203,6 +209,26 @@ if ($is_logged_in) {
                 height: 250px;
             }
         }
+
+        .kategori-foto-badge {
+            display: inline-block;
+            padding: 0.35rem 0.9rem;
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            border-radius: 0.4rem;
+            backdrop-filter: blur(2px);
+        }
+
+        .kategori-foto-pill {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            padding: 0.3rem 0.8rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border-radius: 999px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 
@@ -233,6 +259,7 @@ if ($is_logged_in) {
                                 <?php foreach ($galeri_semua as $i => $g): ?>
                                     <div class="carousel-item main-carousel-item <?= $i == 0 ? 'active' : '' ?>" onclick="openFullscreen(<?= $i ?>)">
                                         <img src="assets/img/galeri/<?= $g['nama_file'] ?>">
+                                        <span class="kategori-foto-pill"><?= $g['kategori_foto'] ?></span>
                                         <?php if ($g['is_360']): ?>
                                             <div class="icon-360-overlay"><i class="bi bi-arrow-repeat"></i></div>
                                             <div class="carousel-caption d-none d-md-block">klik untuk putar 360°</div>
@@ -266,7 +293,7 @@ if ($is_logged_in) {
 
                     <?php if ($first360 != ''): ?>
                         <button class="btn btn-primary fw-bold rounded-pill shadow-sm" onclick="launch360Modal('assets/img/galeri/<?= $first360 ?>')">
-                            <i class="bi bi-goggles"></i> Virtual Tour 360°
+                            <i class="bi bi-goggles"></i> Foto 360°
                         </button>
                     <?php endif; ?>
                 </div>
@@ -335,14 +362,58 @@ if ($is_logged_in) {
                             <i class="bi bi-whatsapp"></i> Chat Pemilik
                         </a>
 
-                        <a href="<?= $btn_action_sewa ?>" class="btn btn-outline-primary fw-bold py-2">
-                            Ajukan Sewa
-                        </a>
+                        <?php if ($is_logged_in): ?>
+                            <button type="button" class="btn btn-outline-primary fw-bold py-2" data-bs-toggle="modal" data-bs-target="#modalAjukanSewa">
+                                Ajukan Sewa
+                            </button>
+                        <?php else: ?>
+                            <a href="<?= $btn_action_sewa ?>" class="btn btn-outline-primary fw-bold py-2">
+                                Ajukan Sewa
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ================================================= Modal Ajukan Sewa ========================================== -->
+    <?php if ($is_logged_in): ?>
+        <div class="modal fade" id="modalAjukanSewa" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Sewa Kamar: <?= $kamar['nama_tipe_kamar'] ?></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="proses_booking.php">
+                        <div class="modal-body">
+                            <input type="hidden" name="ajukan_sewa" value="true">
+
+                            <input type="hidden" name="id_kost" value="<?= $id_kost ?>">
+                            <input type="hidden" name="id_kamar" value="<?= $id_kamar ?>">
+
+                            <div class="mb-3">
+                                <label class="form-label">Mulai Tanggal Berapa?</label>
+                                <input type="date" name="tgl_mulai" class="form-control" required min="<?= date('Y-m-d') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Rencana Sewa (Bulan)</label>
+                                <input type="number" name="durasi" class="form-control" value="1" min="1" required>
+                            </div>
+                            <div class="alert alert-info small">
+                                <i class="bi bi-info-circle"></i> Pemilik akan dikonfirmasi via WhatsApp/Sistem setelah pengajuan ini dikirim.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Kirim Pengajuan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+    <!-- =========================================================================================== -->
 
     <div class="modal fade" id="modalGrid" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -352,20 +423,24 @@ if ($is_logged_in) {
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-2">
-                        <?php foreach ($galeri_semua as $idx => $g): ?>
-                            <div class="col-6 col-md-3">
-                                <div class="position-relative" style="cursor: pointer;" onclick="openFullscreen(<?= $idx ?>)">
-                                    <img src="assets/img/galeri/<?= $g['nama_file'] ?>" class="w-100 rounded" style="height: 150px; object-fit: cover;">
-                                    <?php if ($g['is_360']): ?>
-                                        <div class="position-absolute top-50 start-50 translate-middle text-white bg-dark bg-opacity-50 rounded-circle p-2">
-                                            <i class="bi bi-arrow-repeat fs-4"></i>
-                                        </div>
-                                    <?php endif; ?>
+                    <?php foreach ($galeri_by_kategori as $kategori => $fotoIndexes): ?>
+                        <h6 class="fw-bold text-primary mt-3"><?= $kategori ?></h6>
+                        <div class="row g-2 mb-2">
+                            <?php foreach ($fotoIndexes as $fotoIdx):
+                                $g = $galeri_semua[$fotoIdx]; ?>
+                                <div class="col-6 col-md-3">
+                                    <div class="position-relative" style="cursor: pointer;" onclick="openFullscreen(<?= $fotoIdx ?>)">
+                                        <img src="assets/img/galeri/<?= $g['nama_file'] ?>" class="w-100 rounded" style="height: 150px; object-fit: cover;">
+                                        <?php if ($g['is_360']): ?>
+                                            <div class="position-absolute top-50 start-50 translate-middle text-white bg-dark bg-opacity-50 rounded-circle p-2">
+                                                <i class="bi bi-arrow-repeat fs-4"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -395,7 +470,7 @@ if ($is_logged_in) {
                                         <?php endif; ?>
 
                                         <div class="carousel-caption d-none d-md-block pb-5">
-                                            <h5><?= $g['kategori_foto'] ?></h5>
+                                            <h5 class="kategori-foto-badge"><?= $g['kategori_foto'] ?></h5>
                                         </div>
                                     </div>
                                 </div>

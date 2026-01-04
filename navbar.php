@@ -17,6 +17,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <ul class="navbar-nav ms-auto align-items-center text-center text-lg-start mt-3 mt-lg-0">
                 <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark" href="index">Beranda</a></li>
                 <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark" href="tentang">Tentang</a></li>
+                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark" href="riwayat_sewa">Pesanan</a></li>
 
                 <?php if (isset($_SESSION['login'])): ?>
                     <li class="nav-item dropdown ms-lg-3 mt-2 mt-lg-0">

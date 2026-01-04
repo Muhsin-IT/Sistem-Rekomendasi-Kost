@@ -91,6 +91,16 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
             margin-bottom: 15px;
         }
 
+        .gallery-slot {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .gallery-slot.main-img {
+            grid-row: 1 / 3;
+        }
+
         .gallery-item {
             width: 100%;
             height: 100%;
@@ -103,8 +113,16 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
             transform: scale(1.02);
         }
 
-        .main-img {
-            grid-row: 1 / 3;
+        .kategori-foto-pill {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            padding: 0.25rem 0.9rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            letter-spacing: 0.2px;
         }
 
         .card-custom {
@@ -180,13 +198,16 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
 
         <div class="gallery-container">
             <?php if (count($galeri_biasa) > 0): ?>
-                <img src="assets/img/galeri/<?= $galeri_biasa[0]['nama_file'] ?>" class="gallery-item main-img" onclick="bukaFullscreen(0)">
-                <?php if (isset($galeri_biasa[1])): ?>
-                    <img src="assets/img/galeri/<?= $galeri_biasa[1]['nama_file'] ?>" class="gallery-item sub-img" onclick="bukaFullscreen(1)">
-                <?php endif; ?>
-                <?php if (isset($galeri_biasa[2])): ?>
-                    <img src="assets/img/galeri/<?= $galeri_biasa[2]['nama_file'] ?>" class="gallery-item sub-img" onclick="bukaFullscreen(2)">
-                <?php endif; ?>
+                <?php for ($i = 0; $i < min(3, count($galeri_biasa)); $i++):
+                    $foto = $galeri_biasa[$i];
+                    $slotClass = $i === 0 ? 'gallery-slot main-img' : 'gallery-slot';
+                    $kategori = $foto['kategori_foto'] ?: 'Tanpa Kategori';
+                ?>
+                    <div class="<?= $slotClass ?>" onclick="bukaFullscreen(<?= $i ?>)">
+                        <img src="assets/img/galeri/<?= $foto['nama_file'] ?>" class="gallery-item" />
+                        <span class="kategori-foto-pill"><?= $kategori ?></span>
+                    </div>
+                <?php endfor; ?>
             <?php else: ?>
                 <img src="https://via.placeholder.com/800x400?text=Tidak+Ada+Foto" class="gallery-item main-img">
             <?php endif; ?>
@@ -276,13 +297,15 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
                         <?php foreach ($galeri_biasa as $i => $ph): ?>
                             <div class="col-md-4 col-6">
                                 <div class="card h-100 border-0 shadow-sm">
-                                    <img src="assets/img/galeri/<?= $ph['nama_file'] ?>"
-                                        class="card-img-top"
-                                        style="cursor: pointer; height: 180px; object-fit: cover;"
-                                        onclick="bukaFullscreen(<?= $i ?>)">
+                                    <div class="position-relative">
+                                        <img src="assets/img/galeri/<?= $ph['nama_file'] ?>"
+                                            class="card-img-top"
+                                            style="cursor: pointer; height: 180px; object-fit: cover;"
+                                            onclick="bukaFullscreen(<?= $i ?>)">
 
+                                    </div>
                                     <div class="card-body p-2 text-center bg-white">
-                                        <small class="fw-bold text-dark"><?= $ph['kategori_foto'] ?></small>
+                                        <small class="fw-bold text-dark"><?= $ph['kategori_foto'] ?: 'Tanpa Kategori' ?></small>
                                     </div>
                                 </div>
                             </div>
