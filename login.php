@@ -40,7 +40,7 @@ if (isset($_POST['login'])) {
                 $_SESSION['role'] = $row['role'];
                 $_SESSION['nama_lengkap'] = $row['nama_lengkap'];
 
-                $tujuan = "mahasiswa/index"; // Default
+                $tujuan = "profil"; // Default
 
                 if (isset($_SESSION['redirect_after_login']) && !empty($_SESSION['redirect_after_login'])) {
                     $tujuan = urldecode($_SESSION['redirect_after_login']);

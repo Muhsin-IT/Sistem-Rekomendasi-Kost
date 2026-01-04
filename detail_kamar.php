@@ -229,6 +229,26 @@ if ($is_logged_in) {
             border-radius: 999px;
             font-size: 0.85rem;
         }
+
+        .calendar-widget .calendar-weekdays,
+        .calendar-widget .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+
+        .calendar-widget .calendar-days button {
+            min-height: 42px;
+        }
+
+        .calendar-widget .calendar-days button.active {
+            background-color: #198754;
+            color: #fff;
+        }
+
+        .calendar-widget .calendar-days button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -386,7 +406,7 @@ if ($is_logged_in) {
                         <h5 class="modal-title">Sewa Kamar: <?= $kamar['nama_tipe_kamar'] ?></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <form method="POST" action="proses_booking.php">
+                    <form method="POST" action="proses_booking">
                         <div class="modal-body">
                             <input type="hidden" name="ajukan_sewa" value="true">
 
@@ -395,14 +415,21 @@ if ($is_logged_in) {
 
                             <div class="mb-3">
                                 <label class="form-label">Mulai Tanggal Berapa?</label>
-                                <input type="date" name="tgl_mulai" class="form-control" required min="<?= date('Y-m-d') ?>">
+                                <div id="calendarWidget" class="calendar-widget border rounded-3 p-3"></div>
+                                <input type="hidden" name="tgl_mulai" id="tglMulaiInput" required min="<?= date('Y-m-d') ?>">
+                                <small id="selectedDateLabel" class="text-muted d-block mt-2">Belum memilih tanggal.</small>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Rencana Sewa (Bulan)</label>
-                                <input type="number" name="durasi" class="form-control" value="1" min="1" required>
+                                <div class="d-flex align-items-center gap-3">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="durasiMinus">-</button>
+                                    <span id="durasiValue" class="fw-bold fs-5">1</span>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="durasiPlus">+</button>
+                                </div>
+                                <input type="hidden" name="durasi" id="durasiInput" value="1">
                             </div>
                             <div class="alert alert-info small">
-                                <i class="bi bi-info-circle"></i> Pemilik akan dikonfirmasi via WhatsApp/Sistem setelah pengajuan ini dikirim.
+                                <i class="bi bi-info-circle"></i> Pemilik akan dikonfirmasi Pengajuan anda , Cekstatus pengajuan di halaman pesanan.
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -497,13 +524,25 @@ if ($is_logged_in) {
 
     <div class="d-block d-lg-none fixed-bottom bg-white border-top p-3 shadow">
         <div class="d-flex justify-content-between align-items-center">
-            <div><small class="text-muted d-block">Harga per bulan</small>
+            <div>
+                <small class="text-muted d-block">Harga per bulan</small>
                 <h5 class="fw-bold text-primary mb-0">Rp <?= number_format($kamar['harga_per_bulan'], 0, ',', '.') ?></h5>
             </div>
 
-            <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-warning text-white fw-bold rounded-pill px-4">
-                Pesan <i class="bi bi-whatsapp"></i>
-            </a>
+            <div class="d-flex gap-2">
+                <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-warning text-white fw-bold rounded-pill px-4">
+                    Chat <i class="bi bi-whatsapp ms-1"></i>
+                </a>
+                <?php if ($is_logged_in): ?>
+                    <button type="button" class="btn btn-outline-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAjukanSewa">
+                        Ajukan Sewa
+                    </button>
+                <?php else: ?>
+                    <a href="<?= $btn_action_sewa ?>" class="btn btn-outline-primary fw-bold rounded-pill px-4">
+                        Ajukan Sewa
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -558,8 +597,106 @@ if ($is_logged_in) {
 
         // 3. Saat Modal 360 ditutup, buka kembali Carousel (Opsional, UX bagus)
         modal360El.addEventListener('hidden.bs.modal', function() {
-            modalFs.show(); // Kembali ke galeri utama
+            modalFs.show();
         });
+
+        const minTanggalStr = "<?= date('Y-m-d') ?>";
+        const calendarWidget = document.getElementById('calendarWidget');
+        const tglMulaiInput = document.getElementById('tglMulaiInput');
+        const selectedDateLabel = document.getElementById('selectedDateLabel');
+
+        if (calendarWidget && tglMulaiInput) {
+            let calendarCurrent = new Date(minTanggalStr);
+            let selectedDate = null;
+
+            function renderCalendar() {
+                const year = calendarCurrent.getFullYear();
+                const month = calendarCurrent.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const monthLabel = new Intl.DateTimeFormat('id-ID', {
+                    month: 'long',
+                    year: 'numeric'
+                }).format(calendarCurrent);
+
+                const cells = [];
+                for (let i = 0; i < firstDay; i++) cells.push('');
+                for (let day = 1; day <= daysInMonth; day++) cells.push(day);
+
+                calendarWidget.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-nav="prev">&lt;</button>
+                        <strong>${monthLabel}</strong>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-nav="next">&gt;</button>
+                    </div>
+                    <div class="calendar-weekdays gap-1 mb-1">
+                        ${['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => `<div class="text-center small fw-semibold text-muted">${d}</div>`).join('')}
+                    </div>
+                    <div class="calendar-days gap-1">
+                        ${cells.map(val => {
+                            if (!val) return '<div></div>';
+                            const dateObj = new Date(year, month, val);
+                            const dateStr = dateObj.toISOString().split('T')[0];
+                            const disabled = dateStr < minTanggalStr ? 'disabled' : '';
+                            const active = selectedDate === dateStr ? 'active' : '';
+                            return `<button type="button" class="btn btn-light ${active}" data-date="${dateStr}" ${disabled}>${val}</button>`;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            calendarWidget.addEventListener('click', function(e) {
+                const nav = e.target.getAttribute('data-cal-nav');
+                if (nav === 'prev') {
+                    calendarCurrent.setMonth(calendarCurrent.getMonth() - 1);
+                    renderCalendar();
+                    return;
+                }
+                if (nav === 'next') {
+                    calendarCurrent.setMonth(calendarCurrent.getMonth() + 1);
+                    renderCalendar();
+                    return;
+                }
+                const date = e.target.getAttribute('data-date');
+                if (date && date >= minTanggalStr) {
+                    selectedDate = date;
+                    tglMulaiInput.value = date;
+                    selectedDateLabel.textContent = `Tanggal dipilih: ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(date))}`;
+                    renderCalendar();
+                }
+            });
+
+            renderCalendar();
+        }
+
+        const durasiInput = document.getElementById('durasiInput');
+        const durasiValue = document.getElementById('durasiValue');
+        const durasiMinus = document.getElementById('durasiMinus');
+        const durasiPlus = document.getElementById('durasiPlus');
+
+        function setDurasi(value) {
+            const safeValue = Math.max(1, value);
+            durasiInput.value = safeValue;
+            durasiValue.textContent = safeValue;
+        }
+
+        if (durasiMinus && durasiPlus) {
+            durasiMinus.addEventListener('click', () => setDurasi(parseInt(durasiInput.value, 10) - 1));
+            durasiPlus.addEventListener('click', () => setDurasi(parseInt(durasiInput.value, 10) + 1));
+        }
+
+        const modalAjukanSewaEl = document.getElementById('modalAjukanSewa');
+        if (modalAjukanSewaEl) {
+            modalAjukanSewaEl.addEventListener('shown.bs.modal', function() {
+                const inputTanggal = document.getElementById('tglMulaiInput');
+                if (!inputTanggal) return;
+                if (typeof inputTanggal.showPicker === 'function') {
+                    inputTanggal.showPicker();
+                } else {
+                    inputTanggal.focus();
+                }
+            });
+        }
     </script>
     <?php include 'footer.php'; ?>
 </body>

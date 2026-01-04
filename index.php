@@ -164,13 +164,13 @@ $result = mysqli_query($conn, $query);
                     <div class="search-container d-inline-block w-100" style="max-width: 550px;">
                         <form action="search" method="GET" class="d-flex align-items-center">
                             <i class="bi bi-search text-muted ms-3 fs-5"></i>
-                            <input class="form-control search-input ps-3" type="search" placeholder="Cari nama kost atau area..." name="keyword" required>
+                            <input class="form-control search-input ps-3" type="search" placeholder="Cari nama kost fasilitas atau peraturan..." name="keyword" required>
                             <button class="btn btn-warning text-white fw-bold search-btn" type="submit">CARI</button>
                         </form>
                     </div>
 
                     <div class="mt-4 text-muted small">
-                        <i class="bi bi-info-circle me-1"></i> Populer: "Kost Putra", "Dekat Kampus", "Kamar Mandi Dalam"
+                        <i class="bi bi-info-circle me-1"></i> Populer: "Kost Putra", "Parkiran Mobil", "Kamar Mandi Dalam"
                     </div>
                 </div>
 

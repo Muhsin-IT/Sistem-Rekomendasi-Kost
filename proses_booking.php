@@ -51,7 +51,7 @@ if (isset($_POST['ajukan_sewa']) || isset($_POST['id_kamar'])) {
             // BERHASIL
             echo "<script>
                     alert('BERHASIL! Pengajuan sewa terkirim.'); 
-                    window.location='mahasiswa/riwayat_sewa.php';
+                    window.location='riwayat_sewa';
                   </script>";
         } else {
             // GAGAL SQL

@@ -2,8 +2,59 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+$currentPage = basename($_SERVER['PHP_SELF'] ?? '');
+// Cek apakah halaman saat ini mengandung kata 'profil'
+$isProfilPage = strpos($currentPage, 'profil') !== false;
 ?>
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-2 py-md-3">
+<style>
+    /* Styling Bottom Nav (Tampilan HP) */
+    .bottom-nav {
+        display: none;
+        background: linear-gradient(90deg, #9696ffff, #edf3ffff);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.25);
+        padding: 8px 12px;
+        gap: 10px;
+    }
+
+    .bottom-nav a {
+        flex: 1;
+        text-decoration: none;
+        color: #000000ff;
+        font-size: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .bottom-nav a i {
+        font-size: 1.25rem;
+    }
+
+    .bottom-nav a.active,
+    .bottom-nav a:hover {
+        color: #1500ffff;
+    }
+
+    @media (max-width: 991.98px) {
+        body {
+            padding-bottom: 80px;
+            /* Beri ruang agar konten tidak tertutup bottom nav */
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            z-index: 1030;
+        }
+    }
+</style>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top py-2 py-md-3 main-navbar">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="index">
             <img src="assets/img/logo/radenStay(2).png" alt="RadenStay Logo" height="35" class="me-2 d-inline-block align-text-top">
@@ -22,10 +73,17 @@ if (session_status() === PHP_SESSION_NONE) {
                 <?php if (isset($_SESSION['login'])): ?>
                     <li class="nav-item dropdown ms-lg-3 mt-2 mt-lg-0">
                         <a class="nav-link dropdown-toggle btn btn-outline-primary px-4 rounded-pill" href="#" role="button" data-bs-toggle="dropdown">
-                            Hi, <?= strtok($_SESSION['nama'] ?? 'User', ' ') ?>
+                            Hi, <?= strtok($_SESSION['nama_lengkap'] ?? 'User', ' ') ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 text-center text-lg-start">
-                            <li><a class="dropdown-item" href="<?= $_SESSION['role'] ?>/dashboard"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                            <li><a class="dropdown-item" href="profil"><i class="bi bi-person me-2"></i> Profil Saya</a></li>
+
+                            <?php if ($_SESSION['role'] == 'admin'): ?>
+                                <li><a class="dropdown-item" href="admin/index"><i class="bi bi-speedometer2 me-2"></i> Dashboard Admin</a></li>
+                            <?php elseif ($_SESSION['role'] == 'pemilik'): ?>
+                                <li><a class="dropdown-item" href="pemilik/dashboard"><i class="bi bi-speedometer2 me-2"></i> Dashboard Pemilik</a></li>
+                            <?php endif; ?>
+
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
@@ -42,3 +100,30 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
     </div>
 </nav>
+
+<div class="bottom-nav d-lg-none">
+    <a href="index" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">
+        <i class="bi bi-house-door-fill"></i>
+        <small>Beranda</small>
+    </a>
+    <a href="tentang" class="<?= $currentPage === 'tentang.php' ? 'active' : '' ?>">
+        <i class="bi bi-info-circle-fill"></i>
+        <small>Tentang</small>
+    </a>
+    <a href="riwayat_sewa" class="<?= $currentPage === 'riwayat_sewa.php' ? 'active' : '' ?>">
+        <i class="bi bi-receipt-cutoff"></i>
+        <small>Pesanan</small>
+    </a>
+
+    <?php if (isset($_SESSION['login'])): ?>
+        <a href="profil" class="<?= $isProfilPage ? 'active' : '' ?>">
+            <i class="bi bi-person-circle"></i>
+            <small>Profil</small>
+        </a>
+    <?php else: ?>
+        <a href="login" class="<?= $currentPage === 'login.php' ? 'active' : '' ?>">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <small>Masuk</small>
+        </a>
+    <?php endif; ?>
+</div>
