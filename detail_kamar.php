@@ -378,17 +378,26 @@ if ($is_logged_in) {
                     <h2 class="fw-bold text-primary mb-3">Rp <?= number_format($kamar['harga_per_bulan'], 0, ',', '.') ?> <small class="fs-6 text-muted fw-normal">/ bln</small></h2>
                     <?php $waLink = "https://wa.me/" . $kamar['hp_pemilik'] . "?text=" . urlencode("Halo, saya mau sewa kamar tipe " . $kamar['nama_tipe_kamar'] . " di " . $kamar['nama_kost']); ?>
                     <div class="d-grid gap-2">
-                        <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-warning text-white fw-bold py-2 shadow-sm">
+                        <a href="<?= $is_logged_in ? $waLink : 'login' ?>" target="_blank" class="btn btn-success text-white fw-bold py-2 shadow-sm">
                             <i class="bi bi-whatsapp"></i> Chat Pemilik
                         </a>
 
                         <?php if ($is_logged_in): ?>
-                            <button type="button" class="btn btn-outline-primary fw-bold py-2" data-bs-toggle="modal" data-bs-target="#modalAjukanSewa">
-                                Ajukan Sewa
-                            </button>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-outline-primary fw-bold w-100" data-bs-toggle="modal" data-bs-target="#modalSurvei">
+                                        <i class="bi bi-eye"></i> Survei
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-primary fw-bold w-100" data-bs-toggle="modal" data-bs-target="#modalAjukanSewa">
+                                        Sewa
+                                    </button>
+                                </div>
+                            </div>
                         <?php else: ?>
-                            <a href="<?= $btn_action_sewa ?>" class="btn btn-outline-primary fw-bold py-2">
-                                Ajukan Sewa
+                            <a href="login" class="btn btn-primary fw-bold py-2">
+                                Ajukan Sewa / Survei
                             </a>
                         <?php endif; ?>
                     </div>
@@ -409,8 +418,7 @@ if ($is_logged_in) {
                     <form method="POST" action="proses_booking">
                         <div class="modal-body">
                             <input type="hidden" name="ajukan_sewa" value="true">
-
-                            <input type="hidden" name="id_kost" value="<?= $id_kost ?>">
+                            <input type="hidden" name="tipe_aksi" value="sewa"> <input type="hidden" name="id_kost" value="<?= $id_kost ?>">
                             <input type="hidden" name="id_kamar" value="<?= $id_kamar ?>">
 
                             <div class="mb-3">
@@ -429,11 +437,48 @@ if ($is_logged_in) {
                                 <input type="hidden" name="durasi" id="durasiInput" value="1">
                             </div>
                             <div class="alert alert-info small">
-                                <i class="bi bi-info-circle"></i> Pemilik akan dikonfirmasi Pengajuan anda , Cekstatus pengajuan di halaman pesanan.
+                                <i class="bi bi-info-circle"></i> Pemilik akan dikonfirmasi Pengajuan anda , Cek status pengajuan di halaman pesanan.
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-primary">Kirim Pengajuan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalSurvei" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold">Jadwalkan Survei Lokasi</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="proses_booking">
+                        <div class="modal-body">
+                            <input type="hidden" name="tipe_aksi" value="survei">
+                            <input type="hidden" name="id_kost" value="<?= $id_kost ?>">
+
+                            <div class="alert alert-warning small">
+                                <i class="bi bi-exclamation-circle-fill me-1"></i> <strong>Perhatian:</strong><br>
+                                Batas waktu survei maksimal <strong>3 hari</strong> dari hari ini.
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Rencana Tanggal (Maks 3 Hari)</label>
+                                <div id="calendarSurvei" class="calendar-widget border rounded-3 p-3"></div>
+                                <input type="hidden" name="tgl_survei" id="tglSurveiInput" required>
+                                <small id="selectedSurveiLabel" class="text-muted d-block mt-2">Belum memilih tanggal.</small>
+                                <div class="form-text text-muted">Hanya bisa memilih tanggal <?= date('d M') ?> s/d <?= date('d M', strtotime('+3 days')) ?></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Jam Kira-kira</label>
+                                <input type="time" name="jam_survei" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-outline-primary w-100">Ajukan Jadwal</button>
                         </div>
                     </form>
                 </div>
@@ -530,14 +575,20 @@ if ($is_logged_in) {
             </div>
 
             <div class="d-flex gap-2">
-                <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-warning text-white fw-bold rounded-pill px-4">
+                <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-success text-white fw-bold rounded-pill px-4">
                     Chat <i class="bi bi-whatsapp ms-1"></i>
                 </a>
                 <?php if ($is_logged_in): ?>
+                    <button type="button" class="btn btn-outline-secondary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalSurvei">
+                        Survei
+                    </button>
                     <button type="button" class="btn btn-outline-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAjukanSewa">
                         Ajukan Sewa
                     </button>
                 <?php else: ?>
+                    <a href="login" class="btn btn-outline-secondary fw-bold rounded-pill px-4">
+                        Survei
+                    </a>
                     <a href="<?= $btn_action_sewa ?>" class="btn btn-outline-primary fw-bold rounded-pill px-4">
                         Ajukan Sewa
                     </a>
@@ -601,13 +652,47 @@ if ($is_logged_in) {
         });
 
         const minTanggalStr = "<?= date('Y-m-d') ?>";
+        const maxTanggalSurveiStr = "<?= date('Y-m-d', strtotime('+3 days')) ?>";
+        const calendarConfigs = [];
+        const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
         const calendarWidget = document.getElementById('calendarWidget');
         const tglMulaiInput = document.getElementById('tglMulaiInput');
         const selectedDateLabel = document.getElementById('selectedDateLabel');
+        if (calendarWidget && tglMulaiInput && selectedDateLabel) {
+            calendarConfigs.push({
+                container: calendarWidget,
+                input: tglMulaiInput,
+                label: selectedDateLabel,
+                minDate: minTanggalStr,
+                maxDate: null
+            });
+        }
 
-        if (calendarWidget && tglMulaiInput) {
-            let calendarCurrent = new Date(minTanggalStr);
-            let selectedDate = null;
+        const calendarSurvei = document.getElementById('calendarSurvei');
+        const tglSurveiInput = document.getElementById('tglSurveiInput');
+        const selectedSurveiLabel = document.getElementById('selectedSurveiLabel');
+        if (calendarSurvei && tglSurveiInput && selectedSurveiLabel) {
+            calendarConfigs.push({
+                container: calendarSurvei,
+                input: tglSurveiInput,
+                label: selectedSurveiLabel,
+                minDate: minTanggalStr,
+                maxDate: maxTanggalSurveiStr
+            });
+        }
+
+        calendarConfigs.forEach(cfg => initCalendarWidget(cfg));
+
+        function initCalendarWidget({
+            container,
+            input,
+            label,
+            minDate,
+            maxDate
+        }) {
+            let calendarCurrent = new Date(minDate);
+            let selectedDate = input.value || null;
 
             function renderCalendar() {
                 const year = calendarCurrent.getFullYear();
@@ -623,29 +708,37 @@ if ($is_logged_in) {
                 for (let i = 0; i < firstDay; i++) cells.push('');
                 for (let day = 1; day <= daysInMonth; day++) cells.push(day);
 
-                calendarWidget.innerHTML = `
+                container.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-nav="prev">&lt;</button>
                         <strong>${monthLabel}</strong>
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-cal-nav="next">&gt;</button>
                     </div>
                     <div class="calendar-weekdays gap-1 mb-1">
-                        ${['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => `<div class="text-center small fw-semibold text-muted">${d}</div>`).join('')}
+                        ${dayNames.map(d => `<div class="text-center small fw-semibold text-muted">${d}</div>`).join('')}
                     </div>
                     <div class="calendar-days gap-1">
                         ${cells.map(val => {
                             if (!val) return '<div></div>';
                             const dateObj = new Date(year, month, val);
                             const dateStr = dateObj.toISOString().split('T')[0];
-                            const disabled = dateStr < minTanggalStr ? 'disabled' : '';
+                            const disabled = dateStr < minDate || (maxDate && dateStr > maxDate) ? 'disabled' : '';
                             const active = selectedDate === dateStr ? 'active' : '';
                             return `<button type="button" class="btn btn-light ${active}" data-date="${dateStr}" ${disabled}>${val}</button>`;
                         }).join('')}
                     </div>
                 `;
+                updateSelectedLabel();
             }
 
-            calendarWidget.addEventListener('click', function(e) {
+            function updateSelectedLabel() {
+                if (!label) return;
+                label.textContent = selectedDate ?
+                    `Tanggal dipilih: ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(selectedDate))}` :
+                    'Belum memilih tanggal.';
+            }
+
+            container.addEventListener('click', function(e) {
                 const nav = e.target.getAttribute('data-cal-nav');
                 if (nav === 'prev') {
                     calendarCurrent.setMonth(calendarCurrent.getMonth() - 1);
@@ -658,10 +751,10 @@ if ($is_logged_in) {
                     return;
                 }
                 const date = e.target.getAttribute('data-date');
-                if (date && date >= minTanggalStr) {
+                if (date && date >= minDate && (!maxDate || date <= maxDate)) {
                     selectedDate = date;
-                    tglMulaiInput.value = date;
-                    selectedDateLabel.textContent = `Tanggal dipilih: ${new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(date))}`;
+                    input.value = date;
+                    updateSelectedLabel();
                     renderCalendar();
                 }
             });
