@@ -44,12 +44,6 @@ if (isset($_GET['aksi']) && isset($_GET['id'])) {
 </head>
 
 <body class="bg-light">
-    <div class="container-fluid">
-        <div class="row">
-            <?php include 'sidebar.php'; ?>
-
-            <div class="col-md-10 p-4" style="margin-left: 16.6%;">
-
 
                 <div class="container my-5">
                     <div class="d-flex justify-content-between mb-4">
