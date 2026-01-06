@@ -221,7 +221,7 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                     <h5 class="modal-title fs-6">Ulasan & Akurasi: <span id="namaKostReview" class="fw-bold"></span></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="proses_ulasan.php" onsubmit="return validasiForm()">
+                <form method="POST" action="proses_ulasan" onsubmit="return validasiForm()">
                     <div class="modal-body">
                         <input type="hidden" name="id_kost" id="idKostReview">
 
