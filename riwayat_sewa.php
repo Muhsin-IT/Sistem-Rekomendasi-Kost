@@ -327,13 +327,13 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                 enableButton();
             } else {
                 // Jika Survei, Wajib < 50m
-                if (meter <= 50) {
+                if (meter <= 30) {
                     statusBox.className = 'alert alert-success small py-2 mb-3';
                     jarakText.innerHTML = `Jarak: ${meter} meter (Dalam jangkauan)`;
                     enableButton();
                 } else {
                     statusBox.className = 'alert alert-danger small py-2 mb-3';
-                    jarakText.innerHTML = `Jarak: ${meter} meter (Kejauhan! Max 50m)`;
+                    jarakText.innerHTML = `Kamu berada ${meter}m dari kost (penilaian hanya dapat dilakukan di area kost)`;
                     disableButton('Lokasi Terlalu Jauh');
                 }
             }
