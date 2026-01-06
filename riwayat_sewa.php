@@ -113,6 +113,10 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                                                 <a href="https://wa.me/<?= $s['hp_pemilik'] ?>?text=Halo Kak, saya mau konfirmasi jadi survei ke <?= $s['nama_kost'] ?> tanggal <?= $s['tgl_survei'] ?> jam <?= $s['jam_survei'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill">
                                                     <i class="bi bi-whatsapp"></i> Chat
                                                 </a>
+                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
+                                                    onclick="bukaModalReview('<?= $s['id_kost'] ?>', '<?= $s['nama_kost'] ?>')">
+                                                    <i class="bi bi-star"></i> Nilai Akurasi
+                                                </button>
                                             <?php elseif ($s['status'] == 'Menunggu'): ?>
                                                 <a href="riwayat_sewa.php?aksi=batal_survei&id=<?= $s['id_survei'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Batalkan jadwal survei ini?')">Batal</a>
                                             <?php else: ?>
@@ -186,6 +190,10 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                                                 <a href="riwayat_sewa.php?aksi=batal&id=<?= $row['id_pengajuan'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Batalkan sewa? Stok kamar akan dikembalikan.')">Batal</a>
                                             <?php elseif ($row['status'] == 'Diterima'): ?>
                                                 <a href="https://wa.me/<?= $row['hp_pemilik'] ?>?text=Halo Kak, pengajuan sewa saya di <?= $row['nama_kost'] ?> sudah DITERIMA. Mohon info pembayaran." target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i> Bayar</a>
+                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
+                                                    onclick="bukaModalReview('<?= $row['id_kost'] ?>', '<?= $row['nama_kost'] ?>')">
+                                                    <i class="bi bi-star"></i> Beri Ulasan
+                                                </button>
                                             <?php else: ?>
                                                 <small class="text-muted">Selesai</small>
                                             <?php endif; ?>
@@ -204,6 +212,144 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
         </div>
 
     </div>
+
+    <!-- Modal Ulasan -->
+    <div class="modal fade" id="modalReview" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6">Ulasan & Akurasi: <span id="namaKostReview" class="fw-bold"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="proses_ulasan.php" onsubmit="return validasiForm()">
+                    <div class="modal-body">
+                        <input type="hidden" name="id_kost" id="idKostReview">
+
+                        <input type="hidden" name="user_lat" id="userLat">
+                        <input type="hidden" name="user_long" id="userLong">
+
+                        <div id="gpsStatus" class="alert alert-warning small py-2 mb-3">
+                            <i class="bi bi-geo-alt-fill"></i> Sedang mendeteksi lokasi Anda... <br>
+                            (Wajib berada di lokasi jika via jalur Survei)
+                        </div>
+
+                        <div class="mb-3 border-bottom pb-3">
+                            <label class="form-label fw-bold small text-primary">1. Seberapa AKURAT info/foto di web dengan aslinya?</label>
+                            <div class="rating-stars text-center">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="rating_akurasi" id="ak1" value="1" required>
+                                    <label class="btn btn-outline-warning" for="ak1">1</label>
+
+                                    <input type="radio" class="btn-check" name="rating_akurasi" id="ak2" value="2">
+                                    <label class="btn btn-outline-warning" for="ak2">2</label>
+
+                                    <input type="radio" class="btn-check" name="rating_akurasi" id="ak3" value="3">
+                                    <label class="btn btn-outline-warning" for="ak3">3</label>
+
+                                    <input type="radio" class="btn-check" name="rating_akurasi" id="ak4" value="4">
+                                    <label class="btn btn-outline-warning" for="ak4">4</label>
+
+                                    <input type="radio" class="btn-check" name="rating_akurasi" id="ak5" value="5">
+                                    <label class="btn btn-outline-warning" for="ak5">5 (Sesuai)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-success">2. Kepuasan Umum / Kenyamanan</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="rating_umum" id="um1" value="1" required>
+                                <label class="btn btn-outline-success" for="um1">1</label>
+
+                                <input type="radio" class="btn-check" name="rating_umum" id="um2" value="2">
+                                <label class="btn btn-outline-success" for="um2">2</label>
+
+                                <input type="radio" class="btn-check" name="rating_umum" id="um3" value="3">
+                                <label class="btn btn-outline-success" for="um3">3</label>
+
+                                <input type="radio" class="btn-check" name="rating_umum" id="um4" value="4">
+                                <label class="btn btn-outline-success" for="um4">4</label>
+
+                                <input type="radio" class="btn-check" name="rating_umum" id="um5" value="5">
+                                <label class="btn btn-outline-success" for="um5">5 (Puas)</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Komentar</label>
+                            <textarea name="komentar" class="form-control" rows="3" placeholder="Ceritakan pengalamanmu..."></textarea>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary w-100" id="btnKirimReview" disabled>Kirim Ulasan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fungsi Buka Modal & Ambil Lokasi
+        function bukaModalReview(idKost, namaKost) {
+            // Set Data Kost ke Modal
+            document.getElementById('idKostReview').value = idKost;
+            document.getElementById('namaKostReview').innerText = namaKost;
+
+            // Tampilkan Modal
+            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
+            myModal.show();
+
+            // Jalankan Geolocation
+            getLocation();
+        }
+
+        function getLocation() {
+            var status = document.getElementById("gpsStatus");
+            var btn = document.getElementById("btnKirimReview");
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                status.innerHTML = "Browser ini tidak mendukung Geolocation.";
+                status.className = "alert alert-danger small py-2 mb-3";
+            }
+        }
+
+        function showPosition(position) {
+            // Sukses Ambil Lokasi
+            document.getElementById("userLat").value = position.coords.latitude;
+            document.getElementById("userLong").value = position.coords.longitude;
+
+            var status = document.getElementById("gpsStatus");
+            status.innerHTML = "<i class='bi bi-check-circle-fill'></i> Lokasi terdeteksi! (" + position.coords.latitude.toFixed(4) + ", " + position.coords.longitude.toFixed(4) + ")";
+            status.className = "alert alert-success small py-2 mb-3";
+
+            // Aktifkan tombol kirim
+            document.getElementById("btnKirimReview").disabled = false;
+        }
+
+        function showError(error) {
+            var status = document.getElementById("gpsStatus");
+            var msg = "";
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    msg = "User menolak permintaan lokasi. (Wajib izinkan untuk fitur ini)";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    msg = "Informasi lokasi tidak tersedia.";
+                    break;
+                case error.TIMEOUT:
+                    msg = "Waktu permintaan lokasi habis.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    msg = "Terjadi error yang tidak diketahui.";
+                    break;
+            }
+            status.innerHTML = "<i class='bi bi-x-circle-fill'></i> " + msg;
+            status.className = "alert alert-danger small py-2 mb-3";
+        }
+    </script>
 
     <?php include 'footer.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
