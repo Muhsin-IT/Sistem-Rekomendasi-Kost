@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 04 Jan 2026 pada 18.12
+-- Waktu pembuatan: 06 Jan 2026 pada 04.52
 -- Versi server: 8.0.30
 -- Versi PHP: 8.1.10
 
@@ -387,11 +387,37 @@ INSERT INTO `rel_peraturan` (`id_rel_peraturan`, `id_kost`, `id_kamar`, `id_mast
 
 CREATE TABLE `review` (
   `id_review` int NOT NULL,
+  `id_kost` int DEFAULT NULL,
   `id_kamar` int DEFAULT NULL,
-  `id_mahasiswa` int DEFAULT NULL,
+  `id_user` int DEFAULT NULL,
   `rating` tinyint DEFAULT NULL,
-  `komentar` text
+  `skor_akurasi` tinyint DEFAULT '0',
+  `komentar` text,
+  `tanggal_review` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `survei`
+--
+
+CREATE TABLE `survei` (
+  `id_survei` int NOT NULL,
+  `id_user` int NOT NULL,
+  `id_kost` int NOT NULL,
+  `tgl_survei` date NOT NULL,
+  `jam_survei` time NOT NULL,
+  `status` enum('Menunggu','Diterima','Ditolak','Selesai') DEFAULT 'Menunggu'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `survei`
+--
+
+INSERT INTO `survei` (`id_survei`, `id_user`, `id_kost`, `tgl_survei`, `jam_survei`, `status`) VALUES
+(1, 7, 4, '2026-01-08', '20:39:00', 'Ditolak'),
+(2, 7, 4, '2026-01-06', '20:19:00', 'Ditolak');
 
 -- --------------------------------------------------------
 
@@ -405,21 +431,22 @@ CREATE TABLE `users` (
   `password` varchar(255) NOT NULL,
   `nama_lengkap` varchar(100) DEFAULT NULL,
   `role` enum('adminsuper','pemilik','mahasiswa') NOT NULL,
-  `no_hp` varchar(20) DEFAULT NULL
+  `no_hp` varchar(20) DEFAULT NULL,
+  `foto_profil` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data untuk tabel `users`
 --
 
-INSERT INTO `users` (`id_user`, `username`, `password`, `nama_lengkap`, `role`, `no_hp`) VALUES
-(1, 'muhsin', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhammad muhsin', 'pemilik', '081234567833'),
-(2, 'pemilik1', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'pemilik 1', 'pemilik', '98765432234567'),
-(3, 'pemilik2', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'pemilik2', 'pemilik', '12345678098'),
-(5, 'muhsin1', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhsin1', 'pemilik', '876543'),
-(7, 'muhsin123', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhammad muhsin', 'mahasiswa', '12345678'),
-(8, 'muhsin321', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhammad muhsin', 'mahasiswa', '23456789'),
-(9, 'admin', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'Super Admin', 'adminsuper', '08123456789');
+INSERT INTO `users` (`id_user`, `username`, `password`, `nama_lengkap`, `role`, `no_hp`, `foto_profil`) VALUES
+(1, 'muhsin', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhammad muhsin', 'pemilik', '081234567833', 0),
+(2, 'pemilik1', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'pemilik 1', 'pemilik', '98765432234567', 0),
+(3, 'pemilik2', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'pemilik2', 'pemilik', '12345678098', 0),
+(5, 'muhsin1', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhsin1', 'pemilik', '876543', 0),
+(7, 'muhsin123', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhammad muhsin', 'mahasiswa', '12345678', 0),
+(8, 'muhsin321', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'muhammad muhsin', 'mahasiswa', '23456789', 0),
+(9, 'admin', '$2y$10$0ksXJMXGKZIWB.9yZWTPzuCw/vbvCDJyPMNpcNhrQEnvXRCKRWfB2', 'Super Admin', 'adminsuper', '08123456789', 0);
 
 --
 -- Indexes for dumped tables
@@ -494,7 +521,16 @@ ALTER TABLE `rel_peraturan`
 ALTER TABLE `review`
   ADD PRIMARY KEY (`id_review`),
   ADD KEY `id_kamar` (`id_kamar`),
-  ADD KEY `id_mahasiswa` (`id_mahasiswa`);
+  ADD KEY `id_mahasiswa` (`id_user`),
+  ADD KEY `id_kost` (`id_kost`);
+
+--
+-- Indeks untuk tabel `survei`
+--
+ALTER TABLE `survei`
+  ADD PRIMARY KEY (`id_survei`),
+  ADD KEY `id_user` (`id_user`),
+  ADD KEY `id_kost` (`id_kost`);
 
 --
 -- Indeks untuk tabel `users`
@@ -541,7 +577,7 @@ ALTER TABLE `master_peraturan`
 -- AUTO_INCREMENT untuk tabel `pengajuan_sewa`
 --
 ALTER TABLE `pengajuan_sewa`
-  MODIFY `id_pengajuan` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_pengajuan` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT untuk tabel `rel_fasilitas`
@@ -560,6 +596,12 @@ ALTER TABLE `rel_peraturan`
 --
 ALTER TABLE `review`
   MODIFY `id_review` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `survei`
+--
+ALTER TABLE `survei`
+  MODIFY `id_survei` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT untuk tabel `users`
@@ -631,7 +673,15 @@ ALTER TABLE `rel_peraturan`
 --
 ALTER TABLE `review`
   ADD CONSTRAINT `review_ibfk_1` FOREIGN KEY (`id_kamar`) REFERENCES `kamar` (`id_kamar`),
-  ADD CONSTRAINT `review_ibfk_2` FOREIGN KEY (`id_mahasiswa`) REFERENCES `users` (`id_user`);
+  ADD CONSTRAINT `review_ibfk_2` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`),
+  ADD CONSTRAINT `review_ibfk_kost` FOREIGN KEY (`id_kost`) REFERENCES `kost` (`id_kost`) ON DELETE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `survei`
+--
+ALTER TABLE `survei`
+  ADD CONSTRAINT `survei_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE CASCADE,
+  ADD CONSTRAINT `survei_ibfk_2` FOREIGN KEY (`id_kost`) REFERENCES `kost` (`id_kost`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
