@@ -342,7 +342,7 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
                             </div>
                             <div class="col-md-6 mb-3">
                                 <div class="rating-box h-100 border-primary">
-                                    <div class="text-primary fw-bold small mb-1"><i class="bi bi-shield-check"></i> SKOR AKURASI INFO (C5)</div>
+                                    <div class="text-primary fw-bold small mb-1"><i class="bi bi-shield-check"></i> AKURASI INFO</div>
                                     <div class="rating-number text-primary"><?= $avg_akurasi ?></div>
                                     <div class="progress mt-2" style="height: 6px;">
                                         <div class="progress-bar bg-primary" role="progressbar" style="width: <?= ($avg_akurasi / 5) * 100 ?>%"></div>
