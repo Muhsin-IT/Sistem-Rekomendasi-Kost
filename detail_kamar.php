@@ -332,7 +332,7 @@ if ($is_logged_in) {
                         </div>
                         <div class="col-4 text-center"><i class="bi bi-people-fill fs-4 text-info"></i>
                             <div class="small text-muted">Kapasitas</div>
-                            <div class="fw-bold">Max <?= $kapasitas ?> Orang</div>
+                            <div class="fw-bold">Max <?= $kapasitas ?></div>
                         </div>
                     </div>
 
@@ -576,22 +576,22 @@ if ($is_logged_in) {
             </div>
 
             <div class="d-flex gap-2">
-                <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-success text-white fw-bold rounded-pill px-4">
-                    Chat <i class="bi bi-whatsapp ms-1"></i>
+                <a href="<?= $btn_action_chat ?>" <?= $target_blank ?> class="btn btn-success text-white fw-bold rounded-pill px-2">
+                    <i class="bi bi-whatsapp ms-1"></i>
                 </a>
                 <?php if ($is_logged_in): ?>
                     <button type="button" class="btn btn-outline-secondary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalSurvei">
                         Survei
                     </button>
                     <button type="button" class="btn btn-outline-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAjukanSewa">
-                        Ajukan Sewa
+                        Sewa
                     </button>
                 <?php else: ?>
                     <a href="login" class="btn btn-outline-secondary fw-bold rounded-pill px-4">
                         Survei
                     </a>
                     <a href="<?= $btn_action_sewa ?>" class="btn btn-outline-primary fw-bold rounded-pill px-4">
-                        Ajukan Sewa
+                        Sewa
                     </a>
                 <?php endif; ?>
             </div>
