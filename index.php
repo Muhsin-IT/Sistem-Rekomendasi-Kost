@@ -5,7 +5,8 @@ include 'koneksi.php';
 // Query Kost
 $query = "SELECT k.*, 
           (SELECT MIN(harga_per_bulan) FROM kamar WHERE id_kost = k.id_kost) as harga_min,
-          (SELECT nama_file FROM galeri WHERE id_kost = k.id_kost AND kategori_foto = 'Tampak Depan' LIMIT 1) as foto_depan
+          (SELECT nama_file FROM galeri WHERE id_kost = k.id_kost AND kategori_foto = 'Tampak Depan' LIMIT 1) as foto_depan,
+          (SELECT AVG(rating) FROM review WHERE id_kost = k.id_kost) as rating_avg
           FROM kost k
           ORDER BY k.id_kost DESC LIMIT 6"; // Dilimit 6 agar tidak terlalu panjang di home
 $result = mysqli_query($conn, $query);
@@ -146,7 +147,17 @@ $result = mysqli_query($conn, $query);
             font-size: 1.25rem;
         }
 
-        /* Footer yang lebih lembut */
+        .badge-rating {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffc107;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 
@@ -209,6 +220,11 @@ $result = mysqli_query($conn, $query);
                                     <i class="bi bi-gender-ambiguous text-success"></i> Campur
                                 <?php endif; ?>
                             </span>
+                            <?php if ($row['rating_avg'] > 0): ?>
+                                <span class="badge-rating">
+                                    <i class="bi bi-star-fill"></i> <?= round($row['rating_avg'], 1) ?>
+                                </span>
+                            <?php endif; ?>
                         </div>
 
                         <div class="card-body p-4 d-flex flex-column">
@@ -228,7 +244,7 @@ $result = mysqli_query($conn, $query);
                                         <span class="price-tag">Rp <?= number_format($row['harga_min'], 0, ',', '.') ?></span>
                                         <small class="text-muted">/bln</small>
                                     <?php else: ?>
-                                        <span class="text-danger fw-bold small">Penuh / Kontak Pemilik</span>
+                                        <span class="text-danger fw-bold small">Penuh/Blm ada kamar</span>
                                     <?php endif; ?>
                                 </div>
                                 <a href="detail_kost?id=<?= $row['id_kost'] ?>" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" style="font-size: 0.9rem;">

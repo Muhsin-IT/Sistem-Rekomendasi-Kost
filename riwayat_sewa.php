@@ -184,7 +184,7 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fs-6">Nilai: <span id="namaKostReview" class="fw-bold"></span></h5>
+                    <h5 class="modal-title fs-6"><span id="namaKostReview" class="fw-bold"></span></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="POST" action="proses_ulasan">

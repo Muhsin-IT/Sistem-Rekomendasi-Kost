@@ -44,7 +44,25 @@ while ($row = mysqli_fetch_assoc($q_kam)) {
     $row['foto'] = $f ? $f['nama_file'] : null;
     $kamars[] = $row;
 }
+// ==================================================== review & RATING ====================================================
+$q_review = mysqli_query($conn, "SELECT r.*, u.nama_lengkap FROM review r JOIN users u ON r.id_user = u.id_user WHERE r.id_kost='$id_kost' ORDER BY r.tanggal_review DESC");
+$total_review = mysqli_num_rows($q_review);
+$avg_rating   = 0;
+$avg_akurasi  = 0;
 
+$list_review = [];
+if ($total_review > 0) {
+    $sum_rating  = 0;
+    $sum_akurasi = 0;
+    while ($r = mysqli_fetch_assoc($q_review)) {
+        $sum_rating  += $r['rating'];
+        $sum_akurasi += $r['skor_akurasi'];
+        $list_review[] = $r;
+    }
+    $avg_rating  = round($sum_rating / $total_review, 1);
+    $avg_akurasi = round($sum_akurasi / $total_review, 1);
+}
+// ===============================================================
 // Fungsi Jarak
 function hitungJarak($lat1, $lon1, $lat2, $lon2)
 {
@@ -183,6 +201,45 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
             /* Efek blur di belakang teks (opsional, biar keren) */
             margin-bottom: 20px;
         }
+
+        /*============================= Review Styles =====================================*/
+        .rating-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            text-align: center;
+        }
+
+        .rating-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+            line-height: 1;
+        }
+
+        .review-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 15px 0;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+        .avatar-review {
+            width: 40px;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        /*============================= /Review Styles =====================================*/
     </style>
 </head>
 
@@ -193,6 +250,12 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
     <main class="container my-4">
         <div class="mb-3">
             <h2 class="fw-bold mb-1"><?= $kost['nama_kost'] ?></h2>
+            <?php if ($total_review > 0): ?>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i> <?= $avg_rating ?></span>
+                    <span class="text-muted small"><?= $total_review ?> Ulasan</span>
+                </div>
+            <?php endif; ?>
             <p class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> <?= $kost['alamat'] ?></p>
         </div>
 
@@ -262,6 +325,66 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
                         </div>
                     </div>
                 <?php endforeach; ?>
+                <div class="mt-5 mb-5">
+                    <h4 class="fw-bold mb-4">Ulasan & Rating Akurasi</h4>
+
+                    <?php if ($total_review > 0): ?>
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <div class="rating-box h-100">
+                                    <div class="text-muted small mb-1">Kepuasan Umum</div>
+                                    <div class="rating-number text-warning"><?= $avg_rating ?></div>
+                                    <div class="small text-muted">
+                                        <?php for ($i = 0; $i < 5; $i++) echo $i < round($avg_rating) ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>'; ?>
+                                    </div>
+                                    <div class="small mt-2">Dari <?= $total_review ?> Ulasan</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="rating-box h-100 border-primary">
+                                    <div class="text-primary fw-bold small mb-1"><i class="bi bi-shield-check"></i> SKOR AKURASI INFO (C5)</div>
+                                    <div class="rating-number text-primary"><?= $avg_akurasi ?></div>
+                                    <div class="progress mt-2" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: <?= ($avg_akurasi / 5) * 100 ?>%"></div>
+                                    </div>
+                                    <div class="small mt-2 text-muted">Tingkat kesesuaian foto & lokasi</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card card-custom p-4">
+                            <?php foreach ($list_review as $rev): ?>
+                                <div class="review-item">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-review me-3"><?= substr($rev['nama_lengkap'], 0, 1) ?></div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0"><?= $rev['nama_lengkap'] ?></h6>
+                                                <small class="text-muted" style="font-size: 0.75rem;">
+                                                    <?= date('d M Y', strtotime($rev['tanggal_review'])) ?>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-light text-warning border"><i class="bi bi-star-fill"></i> <?= $rev['rating'] ?></span>
+                                        </div>
+                                    </div>
+                                    <p class="mb-1 text-dark"><?= htmlspecialchars($rev['komentar']) ?></p>
+                                    <div class="d-flex gap-3">
+                                        <small class="text-muted" style="font-size: 0.75rem;">
+                                            <i class="bi bi-shield-check text-primary"></i> Akurasi: <strong><?= $rev['skor_akurasi'] ?>/5</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-light border text-center py-4">
+                            <h6 class="text-muted">Belum ada ulasan.</h6>
+                            <small>Jadilah yang pertama memberikan nilai akurasi!</small>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div class="col-lg-4">
