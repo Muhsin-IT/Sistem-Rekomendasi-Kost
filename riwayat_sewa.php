@@ -31,7 +31,7 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal' && isset($_GET['id'])) {
     }
 }
 
-// 3. LOGIKA BATALKAN SURVEI (Opsional, hapus data survei)
+// 3. LOGIKA BATALKAN SURVEI
 if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id'])) {
     $id_survei = $_GET['id'];
     mysqli_query($conn, "DELETE FROM survei WHERE id_survei='$id_survei' AND id_user='$id_user' AND status='Menunggu'");
@@ -104,19 +104,28 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                                                 <span class="badge bg-warning text-dark">Menunggu</span>
                                             <?php elseif ($s['status'] == 'Diterima'): ?>
                                                 <span class="badge bg-success">Disetujui</span>
+                                            <?php elseif ($s['status'] == 'Selesai'): ?>
+                                                <span class="badge bg-primary">Selesai</span>
                                             <?php else: ?>
                                                 <span class="badge bg-danger">Ditolak</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-end pe-4">
                                             <?php if ($s['status'] == 'Diterima'): ?>
-                                                <a href="https://wa.me/<?= $s['hp_pemilik'] ?>?text=Halo Kak, saya mau konfirmasi jadi survei ke <?= $s['nama_kost'] ?> tanggal <?= $s['tgl_survei'] ?> jam <?= $s['jam_survei'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill">
+                                                <a href="https://wa.me/<?= $s['hp_pemilik'] ?>?text=Halo Kak, saya mau konfirmasi jadi survei ke <?= $s['nama_kost'] ?> tanggal <?= $s['tgl_survei'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill">
                                                     <i class="bi bi-whatsapp"></i> Chat
                                                 </a>
-                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
-                                                    onclick="bukaModalReview('<?= $s['id_kost'] ?>', '<?= $s['nama_kost'] ?>')">
+                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill mt-1"
+                                                    onclick="bukaModalReview('<?= $s['id_kost'] ?>', '<?= addslashes($s['nama_kost']) ?>')">
                                                     <i class="bi bi-star"></i> Nilai Akurasi
                                                 </button>
+
+                                            <?php elseif ($s['status'] == 'Selesai'): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
+                                                    onclick="bukaModalReview('<?= $s['id_kost'] ?>', '<?= addslashes($s['nama_kost']) ?>')">
+                                                    <i class="bi bi-star"></i> Nilai Akurasi
+                                                </button>
+
                                             <?php elseif ($s['status'] == 'Menunggu'): ?>
                                                 <a href="riwayat_sewa.php?aksi=batal_survei&id=<?= $s['id_survei'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Batalkan jadwal survei ini?')">Batal</a>
                                             <?php else: ?>
@@ -135,7 +144,6 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                 </div>
             </div>
         </div>
-
 
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3">
