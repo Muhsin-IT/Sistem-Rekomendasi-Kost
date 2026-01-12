@@ -52,7 +52,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css">
 
-    <style>
+    <!-- <style>
         /* HERO SECTION (Style Lama) */
         .hero-section {
             background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
@@ -270,6 +270,208 @@ while ($row = mysqli_fetch_assoc($result)) {
         .leaflet-routing-container {
             display: none !important;
         }
+    </style> -->
+    <style>
+        /* HERO SECTION */
+        .hero-section {
+            background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+            padding: 3rem 0;
+            border-bottom: 1px solid #e1e5eb;
+        }
+
+        .hero-title {
+            font-weight: 800;
+            color: #2c3e50;
+            font-size: calc(1.8rem + 1.5vw);
+        }
+
+        .search-container {
+            background: white;
+            padding: 8px;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #eee;
+        }
+
+        .search-input {
+            border: none;
+            box-shadow: none !important;
+        }
+
+        .search-btn {
+            background-color: #fd7e14;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 30px;
+        }
+
+        /* LAYOUT UTAMA */
+        .split-container {
+            display: flex;
+            flex-direction: column;
+            /* Default Mobile: Atas Bawah */
+            width: 100%;
+            overflow-x: hidden;
+            /* Cegah geser kanan kiri di HP */
+        }
+
+        /* AREA LIST (KIRI) */
+        .list-area {
+            background: #fff;
+            padding: 15px;
+            width: 100% !important;
+            /* Default Mobile: Full Width */
+            height: auto;
+            border-right: none;
+        }
+
+        /* AREA PETA (KANAN - DESKTOP) */
+        .map-wrapper-desktop {
+            display: none;
+            /* Mobile: Hidden */
+            background: #eee;
+            position: relative;
+        }
+
+        /* WADAH PETA MOBILE */
+        .mobile-map-placeholder {
+            width: 100%;
+            height: 0;
+            transition: height 0.3s;
+            overflow: hidden;
+        }
+
+        .mobile-map-placeholder.active {
+            height: 350px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        /* RESIZER (BATANG GESER) */
+        .resizer {
+            width: 18px;
+            background-color: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            cursor: col-resize;
+            display: none;
+            /* Mobile: Hidden */
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .resizer:hover,
+        .resizer.dragging {
+            background-color: #e2e6ea;
+        }
+
+        /* --- TAMPILAN DESKTOP (Layar > 768px) --- */
+        @media (min-width: 768px) {
+            .split-container {
+                flex-direction: row;
+                /* Kiri Kanan */
+                height: calc(100vh - 80px);
+                overflow: hidden;
+            }
+
+            .list-area {
+                width: 40% !important;
+                /* Desktop: Start 40% */
+                height: 100%;
+                overflow-y: auto;
+                flex-shrink: 0;
+                /* Agar tidak gepeng */
+            }
+
+            .map-wrapper-desktop {
+                display: block;
+                /* Desktop: Show */
+                flex-grow: 1;
+                /* Mengisi sisa ruang */
+                height: 100%;
+            }
+
+            .resizer {
+                display: flex;
+            }
+
+            /* Desktop: Show Resizer */
+            .mobile-map-placeholder {
+                display: none !important;
+            }
+        }
+
+        /* LAIN-LAIN */
+        .card-kost {
+            cursor: pointer;
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            transition: 0.2s;
+        }
+
+        .card-kost:hover,
+        .card-kost.active {
+            border-color: #0d6efd;
+            background-color: #f8fbff;
+        }
+
+        .badge-gender {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .bg-putra {
+            background: #e7f1ff;
+            color: #0d6efd;
+        }
+
+        .bg-putri {
+            background: #ffeef0;
+            color: #dc3545;
+        }
+
+        .bg-campur {
+            background: #e6fffa;
+            color: #198754;
+        }
+
+        .kost-img-fix {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            display: block;
+            aspect-ratio: 1 / 1;
+        }
+
+        @media (min-width: 768px) {
+            .kost-img-fix {
+                aspect-ratio: 4 / 3;
+                height: 100%;
+                min-height: 130px;
+            }
+        }
+
+        .route-info-box {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 9999;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            min-width: 200px;
+        }
+
+        .leaflet-routing-container {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -380,19 +582,17 @@ while ($row = mysqli_fetch_assoc($result)) {
         const latUNU = <?= $lat_unu ?>;
         const longUNU = <?= $long_unu ?>;
 
-        // 1. Setup Peta
+        // --- SETUP PETA ---
         const map = L.map('map', {
             zoomControl: false
         }).setView([latUNU, longUNU], 14);
         L.control.zoom({
             position: 'topright'
         }).addTo(map);
-
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'RadenStay'
         }).addTo(map);
 
-        // Marker UNU
         const unuIcon = L.icon({
             iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
             iconSize: [40, 40],
@@ -406,39 +606,36 @@ while ($row = mysqli_fetch_assoc($result)) {
         let markers = [];
         let activeIndex = -1;
 
-        // 2. LOOP MARKER KOST (BAGIAN YANG DIPERBAIKI)
+        // --- LOOP DATA & MARKER ---
         dataKost.forEach((k, index) => {
             let marker = L.marker([k.latitude, k.longitude]).addTo(map);
 
-            // A. EVENT CLICK MARKER (Langsung Rute)
             marker.on('click', function() {
                 fokusKeKost(k.latitude, k.longitude, index);
             });
 
-            // B. POPUP SEDERHANA (Tanpa Tombol)
             marker.bindPopup(`
-                <div class="text-center pt-2">
-                    <h6 class="fw-bold mb-1">${k.nama_kost}</h6>
-                    <span class="badge bg-primary">${k.harga_format}</span>
-                    <div class="small text-muted mt-1">(Klik pin untuk rute)</div>
-                </div>
-            `);
-
+            <div class="text-center pt-2">
+                <h6 class="fw-bold mb-1">${k.nama_kost}</h6>
+                <span class="badge bg-primary">${k.harga_format}</span>
+                <div class="small text-muted mt-1">(Klik pin untuk rute)</div>
+            </div>
+        `);
             markers[index] = marker;
         });
 
-        // 3. FUNGSI UTAMA
+        // --- FUNGSI HANDLE CLICK ---
         function handleCardClick(index, lat, lng) {
             fokusKeKost(lat, lng, index);
         }
 
         function fokusKeKost(destLat, destLng, index) {
-            // A. Highlight List di Kiri
+            // Highlight List
             document.querySelectorAll('.card-kost').forEach(c => c.classList.remove('active'));
             const card = document.getElementById(`card-${index}`);
             if (card) card.classList.add('active');
 
-            // Scroll List ke Card yang dipilih (Desktop Only)
+            // Scroll (Desktop Only)
             if (window.innerWidth >= 768 && card) {
                 card.scrollIntoView({
                     behavior: 'smooth',
@@ -446,32 +643,27 @@ while ($row = mysqli_fetch_assoc($result)) {
                 });
             }
 
-            // B. Logika Mobile: Pindahkan Peta ke Bawah Card
+            // Logic Pindah Peta (Mobile vs Desktop)
             const isMobile = window.innerWidth < 768;
             const mapEl = document.getElementById('map');
             const routeBox = document.getElementById('route-info');
 
-            // Simpan posisi scroll window saat ini agar tidak loncat
-            const scrollY = window.scrollY;
-
             if (isMobile) {
-                // Reset placeholder lain
+                // Mobile: Pindah ke bawah card
                 document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
 
-                // Pindahkan Peta
                 const targetContainer = document.getElementById(`mobile-map-target-${index}`);
                 if (targetContainer && !targetContainer.contains(mapEl)) {
                     targetContainer.appendChild(mapEl);
                     targetContainer.appendChild(routeBox);
                     targetContainer.classList.add('active');
 
-                    // Refresh ukuran peta karena wadah berubah
                     setTimeout(() => {
                         map.invalidateSize();
                     }, 50);
                 }
             } else {
-                // Desktop: Pastikan peta di kanan
+                // Desktop: Pastikan di kanan
                 const desktopContainer = document.getElementById('desktop-map-container');
                 if (!desktopContainer.contains(mapEl)) {
                     desktopContainer.appendChild(mapEl);
@@ -481,18 +673,12 @@ while ($row = mysqli_fetch_assoc($result)) {
 
             activeIndex = index;
 
-            // C. Fokus Peta & Gambar Rute
-            // Gunakan panTo agar lebih smooth daripada flyTo jarak dekat
+            // Routing
             map.flyTo([destLat, destLng], 15, {
-                duration: 1.2
+                duration: 1.0
             });
+            if (markers[index]) markers[index].openPopup();
 
-            // Buka Popup Marker
-            if (markers[index]) {
-                markers[index].openPopup();
-            }
-
-            // D. Routing Machine
             if (routingControl) map.removeControl(routingControl);
 
             routingControl = L.Routing.control({
@@ -500,7 +686,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                     routeWhileDragging: false,
                     addWaypoints: false,
                     draggableWaypoints: false,
-                    fitSelectedRoutes: false, // Jangan auto zoom-out kejauhan
+                    fitSelectedRoutes: false,
                     lineOptions: {
                         styles: [{
                             color: '#0d6efd',
@@ -517,58 +703,67 @@ while ($row = mysqli_fetch_assoc($result)) {
                     var summary = e.routes[0].summary;
                     let jarak = (summary.totalDistance / 1000).toFixed(1);
                     let waktu = Math.round(summary.totalTime / 60);
-
                     routeBox.style.display = 'block';
                     document.getElementById('route-details').innerHTML = `Jarak: <b>${jarak} km</b> • Waktu: <b>${waktu} mnt</b>`;
                 })
                 .addTo(map);
         }
 
-        // --- SCRIPT RESIZER ---
+        // --- SCRIPT RESIZER & RESPONSIVE FIX ---
         document.addEventListener('DOMContentLoaded', function() {
             const resizer = document.getElementById('dragHandle');
             const leftSide = document.querySelector('.list-area');
             const container = document.querySelector('.split-container');
-
-            if (!resizer) return;
-
             let x = 0;
             let leftWidth = 0;
 
-            const mouseDownHandler = function(e) {
-                x = e.clientX;
-                leftWidth = leftSide.getBoundingClientRect().width;
-                resizer.classList.add('dragging');
-                document.addEventListener('mousemove', mouseMoveHandler);
-                document.addEventListener('mouseup', mouseUpHandler);
-                document.getElementById('map').style.pointerEvents = 'none'; // Matikan interaksi peta saat geser
-            };
+            // Logic Resizer (Hanya Desktop)
+            if (resizer) {
+                const mouseDownHandler = function(e) {
+                    x = e.clientX;
+                    leftWidth = leftSide.getBoundingClientRect().width;
+                    resizer.classList.add('dragging');
+                    document.body.style.cursor = 'col-resize';
+                    document.addEventListener('mousemove', mouseMoveHandler);
+                    document.addEventListener('mouseup', mouseUpHandler);
+                    document.getElementById('map').style.pointerEvents = 'none';
+                };
 
-            const mouseMoveHandler = function(e) {
-                const dx = e.clientX - x;
-                const containerWidth = container.getBoundingClientRect().width;
-                let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
-                if (newLeftWidth < 25) newLeftWidth = 25; // Batas Min
-                if (newLeftWidth > 70) newLeftWidth = 70; // Batas Max
-                leftSide.style.width = `${newLeftWidth}%`;
-                map.invalidateSize(); // Penting!
-            };
+                const mouseMoveHandler = function(e) {
+                    const dx = e.clientX - x;
+                    const containerWidth = container.getBoundingClientRect().width;
+                    let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
+                    if (newLeftWidth < 25) newLeftWidth = 25;
+                    if (newLeftWidth > 70) newLeftWidth = 70;
+                    leftSide.style.width = `${newLeftWidth}%`; // Ini yang bikin bug di mobile
+                    map.invalidateSize();
+                };
 
-            const mouseUpHandler = function() {
-                resizer.classList.remove('dragging');
-                document.getElementById('map').style.pointerEvents = 'auto'; // Hidupkan peta lagi
-                document.removeEventListener('mousemove', mouseMoveHandler);
-                document.removeEventListener('mouseup', mouseUpHandler);
-            };
+                const mouseUpHandler = function() {
+                    resizer.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.getElementById('map').style.pointerEvents = 'auto';
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                };
 
-            resizer.addEventListener('mousedown', mouseDownHandler);
+                resizer.addEventListener('mousedown', mouseDownHandler);
+            }
 
-            // Fix Layout saat Resize Window
+            // --- BUG FIX PENTING UNTUK RESPONSIVE ---
             window.addEventListener('resize', () => {
-                if (window.innerWidth >= 768) {
-                    const mapEl = document.getElementById('map');
-                    const routeBox = document.getElementById('route-info');
-                    const desktopContainer = document.getElementById('desktop-map-container');
+                const isMobile = window.innerWidth < 768;
+                const mapEl = document.getElementById('map');
+                const routeBox = document.getElementById('route-info');
+                const desktopContainer = document.getElementById('desktop-map-container');
+
+                if (isMobile) {
+                    // 1. SAAT MODE MOBILE: HAPUS STYLE WIDTH INLINE
+                    // Agar list area kembali 100% mengikuti CSS
+                    leftSide.style.width = '';
+
+                } else {
+                    // 2. SAAT MODE DESKTOP: BALIKKAN PETA KE KANAN
                     if (!desktopContainer.contains(mapEl)) {
                         desktopContainer.appendChild(mapEl);
                         desktopContainer.appendChild(routeBox);
