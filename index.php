@@ -345,10 +345,10 @@ while ($row = mysqli_fetch_assoc($result)) {
             border: 1px solid #ddd;
         }
 
-        /* RESIZER (BATANG GESER) - DIPERBAIKI */
+        /* --- RESIZER (BATANG GESER) - PERBAIKAN Z-INDEX --- */
         .resizer {
-            width: 20px;
-            /* Diperlebar agar mudah disentuh */
+            width: 24px;
+            /* Sedikit diperlebar agar mudah kena mouse/jari */
             background-color: #f8f9fa;
             border-left: 1px solid #dee2e6;
             border-right: 1px solid #dee2e6;
@@ -356,17 +356,19 @@ while ($row = mysqli_fetch_assoc($result)) {
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 999;
-            /* Z-Index Tinggi */
-            user-select: none;
-            touch-action: none;
-            /* Mencegah scroll saat drag di HP */
+
+            /* KUNCI PERBAIKAN: Layer Paling Atas */
+            position: relative;
+            z-index: 9999 !important;
+            height: 100%;
+            align-self: stretch;
+            flex-shrink: 0;
         }
 
         .resizer:hover,
         .resizer.dragging {
-            background-color: #0d6efd;
-            color: white;
+            background-color: #f8f9fa;
+            color: inherit;
         }
 
         /* --- TAMPILAN DESKTOP (Layar > 768px) --- */
@@ -399,7 +401,7 @@ while ($row = mysqli_fetch_assoc($result)) {
             }
         }
 
-        /* LAIN-LAIN */
+        /* KARTU & LAINNYA */
         .card-kost {
             cursor: pointer;
             border: 1px solid #f0f0f0;
@@ -615,12 +617,18 @@ while ($row = mysqli_fetch_assoc($result)) {
             markers[index] = marker;
         });
 
-        // --- FUNGSI CLICK CARD (FIX BUG MOBILE) ---
+        // --- FUNGSI CLICK CARD (FIX BUG MOBILE MAP TERTUTUP) ---
         function handleCardClick(index, lat, lng, event) {
-            // [PENTING] Cek apakah yang diklik adalah PETA atau bagian dalamnya
-            // Jika user klik peta/tombol zoom/marker, JANGAN jalankan logika tutup kartu
-            if (event && (event.target.closest('#map') || event.target.closest('.leaflet-control') || event.target.closest('.leaflet-marker-icon'))) {
-                return;
+            // Cek apakah user mengklik PETA atau tombol di dalamnya?
+            // Jika YA, hentikan fungsi ini agar kartu tidak tertutup
+            if (event && (
+                    event.target.id === 'map' ||
+                    event.target.closest('#map') ||
+                    event.target.closest('.leaflet-control') ||
+                    event.target.closest('.leaflet-marker-icon') ||
+                    event.target.closest('.leaflet-popup')
+                )) {
+                return; // Jangan lakukan apa-apa
             }
 
             fokusKeKost(lat, lng, index);
@@ -631,15 +639,16 @@ while ($row = mysqli_fetch_assoc($result)) {
             const mapEl = document.getElementById('map');
             const routeBox = document.getElementById('route-info');
 
-            // Logic Highlight Card
+            // Reset Highlight
             document.querySelectorAll('.card-kost').forEach(c => c.classList.remove('active'));
             const card = document.getElementById(`card-${index}`);
             if (card) card.classList.add('active');
 
-            // Logic Mobile Toggle (Buka/Tutup)
             if (isMobile) {
-                // Jika klik kartu yang sama -> Tutup
+                // Mobile Logic
+                // Jika kartu yang sama diklik lagi -> Tutup (Toggle)
                 if (activeIndex === index && mapEl.parentElement.id !== 'desktop-map-container') {
+                    // Kembalikan ke desktop container (sembunyi)
                     document.getElementById('desktop-map-container').appendChild(mapEl);
                     document.getElementById('desktop-map-container').appendChild(routeBox);
                     document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
@@ -647,7 +656,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                     return;
                 }
 
-                // Pindah Peta ke Bawah Card
+                // Pindah Peta ke Bawah Card Baru
                 document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
                 const targetContainer = document.getElementById(`mobile-map-target-${index}`);
 
@@ -657,13 +666,12 @@ while ($row = mysqli_fetch_assoc($result)) {
                     targetContainer.classList.add('active');
                 }
             } else {
-                // Desktop: Scroll List ke Card
+                // Desktop Logic
                 if (card) card.scrollIntoView({
                     behavior: 'smooth',
                     block: 'center'
                 });
 
-                // Pastikan peta di kanan
                 const desktopContainer = document.getElementById('desktop-map-container');
                 if (!desktopContainer.contains(mapEl)) {
                     desktopContainer.appendChild(mapEl);
@@ -673,12 +681,11 @@ while ($row = mysqli_fetch_assoc($result)) {
 
             activeIndex = index;
 
-            // Refresh Ukuran Peta (Penting agar tidak error saat dipindah)
+            // Refresh Map Size & Routing
             setTimeout(() => {
                 map.invalidateSize();
-            }, 50);
+            }, 100);
 
-            // Routing & FlyTo
             map.flyTo([destLat, destLng], 15, {
                 duration: 1.0
             });
@@ -722,46 +729,67 @@ while ($row = mysqli_fetch_assoc($result)) {
             let leftWidth = 0;
 
             if (resizer) {
-                // Fungsi Mulai Geser (Gabungan Mouse & Touch)
+                // 1. Fungsi Start Drag (Unified Mouse & Touch)
                 const startDrag = function(e) {
-                    // Ambil posisi X (Mouse atau Touch)
-                    x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                    if (!leftSide || !container) return;
+                    // Deteksi input Mouse atau Touch
+                    if (e.type === 'touchstart') {
+                        x = e.touches[0].clientX;
+                    } else {
+                        e.preventDefault(); // Mencegah seleksi teks di desktop
+                        x = e.clientX;
+                    }
+
                     leftWidth = leftSide.getBoundingClientRect().width;
 
                     resizer.classList.add('dragging');
                     document.body.style.cursor = 'col-resize';
 
-                    // Matikan interaksi peta sementara
+                    // Matikan interaksi peta agar iframe tidak mencuri event drag
                     document.getElementById('map').style.pointerEvents = 'none';
 
-                    if (e.type.includes('mouse')) {
+                    if (e.type === 'touchstart') {
+                        document.addEventListener('touchmove', onDrag, {
+                            passive: false
+                        });
+                        document.addEventListener('touchend', stopDrag);
+                    } else {
                         document.addEventListener('mousemove', onDrag);
                         document.addEventListener('mouseup', stopDrag);
-                    } else {
-                        document.addEventListener('touchmove', onDrag);
-                        document.addEventListener('touchend', stopDrag);
                     }
                 };
 
+                // 2. Fungsi Move Drag
                 const onDrag = function(e) {
-                    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                    if (!leftSide || !container) return;
+                    let clientX;
+                    if (e.type === 'touchmove') {
+                        // e.preventDefault(); // Mencegah scroll layar saat geser di HP
+                        clientX = e.touches[0].clientX;
+                    } else {
+                        clientX = e.clientX;
+                    }
+
                     const dx = clientX - x;
                     const containerWidth = container.getBoundingClientRect().width;
 
                     let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
 
-                    // Batas Minimal & Maksimal
-                    if (newLeftWidth < 25) newLeftWidth = 25;
+                    // Batas Min 20% & Max 75%
+                    if (newLeftWidth < 20) newLeftWidth = 20;
                     if (newLeftWidth > 75) newLeftWidth = 75;
 
                     leftSide.style.width = `${newLeftWidth}%`;
-                    map.invalidateSize();
+                    leftSide.style.flexBasis = `${newLeftWidth}%`;
+                    // Penting: Render ulang peta saat ukuran berubah
+                    if (typeof map !== 'undefined') map.invalidateSize();
                 };
 
+                // 3. Fungsi Stop Drag
                 const stopDrag = function() {
                     resizer.classList.remove('dragging');
                     document.body.style.cursor = '';
-                    document.getElementById('map').style.pointerEvents = 'auto';
+                    document.getElementById('map').style.pointerEvents = 'auto'; // Hidupkan peta lagi
 
                     document.removeEventListener('mousemove', onDrag);
                     document.removeEventListener('mouseup', stopDrag);
@@ -771,10 +799,12 @@ while ($row = mysqli_fetch_assoc($result)) {
 
                 // Pasang Listener
                 resizer.addEventListener('mousedown', startDrag);
-                resizer.addEventListener('touchstart', startDrag);
+                resizer.addEventListener('touchstart', startDrag, {
+                    passive: false
+                });
             }
 
-            // --- FIX RESPONSIVE SAAT RESIZE WINDOW ---
+            // Fix Layout saat Resize Window
             window.addEventListener('resize', () => {
                 const isMobile = window.innerWidth < 768;
                 const mapEl = document.getElementById('map');
@@ -782,7 +812,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                 const desktopContainer = document.getElementById('desktop-map-container');
 
                 if (isMobile) {
-                    leftSide.style.width = ''; // Reset width di mobile
+                    leftSide.style.width = ''; // Reset ke full width di mobile
                 } else {
                     if (!desktopContainer.contains(mapEl)) {
                         desktopContainer.appendChild(mapEl);
@@ -795,263 +825,6 @@ while ($row = mysqli_fetch_assoc($result)) {
         });
     </script>
 
-    <!-- <script>
-        const dataKost = <?= json_encode($data_map) ?>;
-        const latUNU = <?= $lat_unu ?>;
-        const longUNU = <?= $long_unu ?>;
-
-        // --- SETUP PETA ---
-        const map = L.map('map', {
-            zoomControl: false
-        }).setView([latUNU, longUNU], 14);
-        L.control.zoom({
-            position: 'topright'
-        }).addTo(map);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'RadenStay'
-        }).addTo(map);
-
-        const unuIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
-            iconSize: [40, 40],
-            popupAnchor: [0, -20]
-        });
-        L.marker([latUNU, longUNU], {
-            icon: unuIcon
-        }).addTo(map).bindPopup("<b>Kampus UNU</b><br>Titik Awal");
-
-        let routingControl = null;
-        let markers = [];
-        let activeIndex = -1;
-
-        // --- LOOP DATA & MARKER ---
-        dataKost.forEach((k, index) => {
-            let marker = L.marker([k.latitude, k.longitude]).addTo(map);
-
-            marker.on('click', function() {
-                fokusKeKost(k.latitude, k.longitude, index);
-            });
-
-            marker.bindPopup(`
-            <div class="text-center pt-2">
-                <h6 class="fw-bold mb-1">${k.nama_kost}</h6>
-                <span class="badge bg-primary">${k.harga_format}</span>
-                <div class="small text-muted mt-1">(Klik pin untuk rute)</div>
-            </div>
-        `);
-            markers[index] = marker;
-        });
-
-        // --- FUNGSI HANDLE CLICK ---
-        function handleCardClick(index, lat, lng) {
-            fokusKeKost(lat, lng, index);
-        }
-
-        function fokusKeKost(destLat, destLng, index) {
-            // Highlight List
-            document.querySelectorAll('.card-kost').forEach(c => c.classList.remove('active'));
-            const card = document.getElementById(`card-${index}`);
-            if (card) card.classList.add('active');
-
-            // Scroll (Desktop Only)
-            if (window.innerWidth >= 768 && card) {
-                card.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }
-
-            // Logic Pindah Peta (Mobile vs Desktop)
-            const isMobile = window.innerWidth < 768;
-            const mapEl = document.getElementById('map');
-            const routeBox = document.getElementById('route-info');
-
-            if (isMobile) {
-                // Mobile: Pindah ke bawah card
-                document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
-
-                const targetContainer = document.getElementById(`mobile-map-target-${index}`);
-                if (targetContainer && !targetContainer.contains(mapEl)) {
-                    targetContainer.appendChild(mapEl);
-                    targetContainer.appendChild(routeBox);
-                    targetContainer.classList.add('active');
-
-                    setTimeout(() => {
-                        map.invalidateSize();
-                    }, 50);
-                }
-            } else {
-                // Desktop: Pastikan di kanan
-                const desktopContainer = document.getElementById('desktop-map-container');
-                if (!desktopContainer.contains(mapEl)) {
-                    desktopContainer.appendChild(mapEl);
-                    desktopContainer.appendChild(routeBox);
-                }
-            }
-
-            activeIndex = index;
-
-            // Routing
-            map.flyTo([destLat, destLng], 15, {
-                duration: 1.0
-            });
-            if (markers[index]) markers[index].openPopup();
-
-            if (routingControl) map.removeControl(routingControl);
-
-            routingControl = L.Routing.control({
-                    waypoints: [L.latLng(latUNU, longUNU), L.latLng(destLat, destLng)],
-                    routeWhileDragging: false,
-                    addWaypoints: false,
-                    draggableWaypoints: false,
-                    fitSelectedRoutes: false,
-                    lineOptions: {
-                        styles: [{
-                            color: '#0d6efd',
-                            opacity: 0.8,
-                            weight: 6
-                        }]
-                    },
-                    createMarker: function() {
-                        return null;
-                    },
-                    show: false
-                })
-                .on('routesfound', function(e) {
-                    var summary = e.routes[0].summary;
-                    let jarak = (summary.totalDistance / 1000).toFixed(1);
-                    let waktu = Math.round(summary.totalTime / 60);
-                    routeBox.style.display = 'block';
-                    document.getElementById('route-details').innerHTML = `Jarak: <b>${jarak} km</b> • Waktu: <b>${waktu} mnt</b>`;
-                })
-                .addTo(map);
-        }
-
-        // --- SCRIPT RESIZER & RESPONSIVE FIX ---
-        document.addEventListener('DOMContentLoaded', function() {
-            const resizer = document.getElementById('dragHandle');
-            const leftSide = document.querySelector('.list-area');
-            const container = document.querySelector('.split-container');
-            let x = 0;
-            let leftWidth = 0;
-
-            // Logic Resizer (Hanya Desktop)
-            if (resizer) {
-                const mouseDownHandler = function(e) {
-                    x = e.clientX;
-                    leftWidth = leftSide.getBoundingClientRect().width;
-                    resizer.classList.add('dragging');
-                    document.body.style.cursor = 'col-resize';
-                    document.addEventListener('mousemove', mouseMoveHandler);
-                    document.addEventListener('mouseup', mouseUpHandler);
-                    document.getElementById('map').style.pointerEvents = 'none';
-                };
-
-                const mouseMoveHandler = function(e) {
-                    const dx = e.clientX - x;
-                    const containerWidth = container.getBoundingClientRect().width;
-                    let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
-                    if (newLeftWidth < 25) newLeftWidth = 25;
-                    if (newLeftWidth > 70) newLeftWidth = 70;
-                    leftSide.style.width = `${newLeftWidth}%`; // Ini yang bikin bug di mobile
-                    map.invalidateSize();
-                };
-
-                const mouseUpHandler = function() {
-                    resizer.classList.remove('dragging');
-                    document.body.style.cursor = '';
-                    document.getElementById('map').style.pointerEvents = 'auto';
-                    document.removeEventListener('mousemove', mouseMoveHandler);
-                    document.removeEventListener('mouseup', mouseUpHandler);
-                };
-
-                resizer.addEventListener('mousedown', mouseDownHandler);
-            }
-
-            // --- BUG FIX PENTING UNTUK RESPONSIVE ---
-            window.addEventListener('resize', () => {
-                const isMobile = window.innerWidth < 768;
-                const mapEl = document.getElementById('map');
-                const routeBox = document.getElementById('route-info');
-                const desktopContainer = document.getElementById('desktop-map-container');
-
-                if (isMobile) {
-                    // 1. SAAT MODE MOBILE: HAPUS STYLE WIDTH INLINE
-                    // Agar list area kembali 100% mengikuti CSS
-                    leftSide.style.width = '';
-
-                } else {
-                    // 2. SAAT MODE DESKTOP: BALIKKAN PETA KE KANAN
-                    if (!desktopContainer.contains(mapEl)) {
-                        desktopContainer.appendChild(mapEl);
-                        desktopContainer.appendChild(routeBox);
-                        document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
-                        map.invalidateSize();
-                    }
-                }
-            });
-        });
-    </script> -->
-    <!-- <script>
-        // === SCRIPT RESIZER (GESER LEBAR LIST) ===
-        document.addEventListener('DOMContentLoaded', function() {
-            const resizer = document.getElementById('dragHandle');
-            const leftSide = document.querySelector('.list-area');
-            const rightSide = document.querySelector('.map-wrapper-desktop');
-            const container = document.querySelector('.split-container');
-
-            // Posisi awal
-            let x = 0;
-            let leftWidth = 0;
-
-            const mouseDownHandler = function(e) {
-                // Ambil posisi mouse saat ini
-                x = e.clientX;
-                leftWidth = leftSide.getBoundingClientRect().width;
-
-                // Tambahkan class agar visual tetap highlight saat geser cepat
-                resizer.classList.add('dragging');
-
-                // Pasang event listener ke document
-                document.addEventListener('mousemove', mouseMoveHandler);
-                document.addEventListener('mouseup', mouseUpHandler);
-
-                // Matikan iframe events (peta) sementara agar tidak mengganggu drag
-                document.getElementById('map').style.pointerEvents = 'none';
-            };
-
-            const mouseMoveHandler = function(e) {
-                // Hitung seberapa jauh mouse bergerak
-                const dx = e.clientX - x;
-                const containerWidth = container.getBoundingClientRect().width;
-
-                // Hitung persentase lebar baru
-                let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
-
-                // Batasi minimal 20% dan maksimal 70% agar tidak rusak
-                if (newLeftWidth < 20) newLeftWidth = 20;
-                if (newLeftWidth > 70) newLeftWidth = 70;
-
-                leftSide.style.width = `${newLeftWidth}%`;
-
-                // PENTING: Refresh ukuran peta Leaflet agar tidak error/grey
-                if (typeof map !== 'undefined') map.invalidateSize();
-            };
-
-            const mouseUpHandler = function() {
-                resizer.classList.remove('dragging');
-                document.getElementById('map').style.pointerEvents = 'auto'; // Hidupkan peta lagi
-
-                document.removeEventListener('mousemove', mouseMoveHandler);
-                document.removeEventListener('mouseup', mouseUpHandler);
-            };
-
-            // Pasang listener hanya jika elemen ada (Desktop)
-            if (resizer) {
-                resizer.addEventListener('mousedown', mouseDownHandler);
-            }
-        });
-    </script> -->
 </body>
 
 </html>
