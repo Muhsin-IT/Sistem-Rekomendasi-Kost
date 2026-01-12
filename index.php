@@ -192,6 +192,31 @@ while ($row = mysqli_fetch_assoc($result)) {
             }
         }
 
+        /* --- UPDATE STYLE FOTO KOST --- */
+        .kost-img-fix {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* KUNCI: Agar foto tidak gepeng (dicrop otomatis) */
+            border-radius: 8px;
+            display: block;
+
+            /* TAMPILAN HP (Layar Kecil): KOTAK (1:1) */
+            aspect-ratio: 1 / 1;
+        }
+
+        /* TAMPILAN LAPTOP/PC (Layar Besar): PERSEGI PANJANG (4:3) */
+        @media (min-width: 768px) {
+            .kost-img-fix {
+                aspect-ratio: 4 / 3;
+                /* Ubah jadi 16/9 jika ingin lebih lebar */
+                height: 100%;
+                /* Mengikuti tinggi card */
+                min-height: 130px;
+                /* Jaga agar tidak terlalu pendek */
+            }
+        }
+
         /* ITEM CARD */
         .card-kost {
             cursor: pointer;
@@ -282,43 +307,46 @@ while ($row = mysqli_fetch_assoc($result)) {
 
             <div class="list-area">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold mb-0 text-secondary">Hasil Pencarian</h6>
+                    <h6 class="fw-bold mb-0 text-secondary">Rekomendasi Kost Terbaru</h6>
                     <a href="rekomendasi_saw.php" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-stars"></i> Rekomendasi AI</a>
                 </div>
 
                 <div class="d-flex flex-column gap-3">
                     <?php foreach ($data_map as $index => $row): ?>
                         <div class="card card-kost shadow-sm p-2" id="card-<?= $index ?>" onclick="handleCardClick(<?= $index ?>, <?= $row['latitude'] ?>, <?= $row['longitude'] ?>)">
-                            <div class="row g-0">
-                                <div class="col-4">
-                                    <img src="<?= $row['foto_tampil'] ?>" class="rounded w-100 h-100 object-fit-cover" style="min-height: 100px;">
+                            <div class="row g-0 align-items-center">
+                                <div class="col-4 col-md-5"> <img src="<?= $row['foto_tampil'] ?>" class="kost-img-fix" alt="Foto Kost">
                                 </div>
-                                <div class="col-8">
-                                    <div class="card-body p-2">
+
+                                <div class="col-8 col-md-7">
+                                    <div class="card-body p-2 ps-3">
                                         <div class="d-flex justify-content-between mb-1">
                                             <span class="badge-gender <?= ($row['jenis_kost'] == 'Putra' ? 'bg-putra' : ($row['jenis_kost'] == 'Putri' ? 'bg-putri' : 'bg-campur')) ?>"><?= $row['jenis_kost'] ?></span>
                                             <?php if ($row['rating_tampil'] > 0): ?>
                                                 <small class="text-warning fw-bold"><i class="bi bi-star-fill"></i> <?= $row['rating_tampil'] ?></small>
                                             <?php endif; ?>
                                         </div>
+
                                         <h6 class="fw-bold mb-1 text-truncate"><?= $row['nama_kost'] ?></h6>
+
                                         <small class="text-muted d-block mb-2" style="font-size: 0.8rem;">
-                                            <i class="bi bi-geo-alt-fill text-danger"></i> <?= substr($row['alamat'], 0, 20) ?>...
+                                            <i class="bi bi-geo-alt-fill text-danger"></i> <?= substr($row['alamat'], 0, 15) ?>...
                                             <b>(<?= $row['jarak_kampus'] ?> km)</b>
                                         </small>
+
                                         <div class="d-flex justify-content-between align-items-end">
                                             <div>
                                                 <small class="text-muted" style="font-size: 0.65rem">Mulai dari</small><br>
-                                                <span class="text-primary fw-bold"><?= $row['harga_format'] ?></span>
+                                                <span class="text-primary fw-bold" style="font-size: 0.9rem;"><?= $row['harga_format'] ?></span>
                                             </div>
-                                            <a href="detail_kost.php?id=<?= $row['id_kost'] ?>" class="btn btn-sm btn-primary rounded-pill py-0 px-3" style="font-size: 0.8rem">Detail</a>
+                                            <a href="detail_kost.php?id=<?= $row['id_kost'] ?>" class="btn btn-sm btn-primary rounded-pill py-0 px-2" style="font-size: 0.75rem">Detail</a>
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
 
                             <div id="mobile-map-target-<?= $index ?>" class="mobile-map-placeholder"></div>
-
                         </div>
                     <?php endforeach; ?>
                 </div>
