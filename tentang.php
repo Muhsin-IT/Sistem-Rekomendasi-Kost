@@ -225,19 +225,24 @@ session_start();
 
         <div class="row justify-content-center g-4">
 
-            <div class="col-md-6 col-lg-4 fade-in-up delay-3">
-                <div class="team-card">
+            <div class="col-md-6 col-lg-4 fade-in-up delay-4">
+                <div class="team-card border-primary" style="border: 2px solid #0d6efd;">
+                    <!-- 👆 style="border: 2px solid #0d6efd;" -->
+                    <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">Project Manager</div>
                     <div class="team-avatar">
-                        <img src="https://ui-avatars.com/api/?name=Nailul+Ashfiya&background=0d6efd&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
+                        <img src="https://ui-avatars.com/api/?name=Qolbin+Salmi&background=141ffd&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
                     </div>
-                    <h5 class="fw-bold mb-1">Nailul Ashfiya</h5>
-                    <p class="team-role">231111003</p>
+                    <h5 class="fw-bold mb-1">M Qolbin Salim</h5>
+                    <p class="team-role">2311110XX</p>
                     <p class="small text-muted">Tim Pengembang</p>
                 </div>
             </div>
 
+
+
             <div class="col-md-6 col-lg-4 fade-in-up delay-3">
-                <div class="team-card">
+                <div class="team-card border-primary" style="border: 2px solid #0d6efd;">
+                    <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">Data Collector</div>
                     <div class="team-avatar">
                         <img src="https://ui-avatars.com/api/?name=Kholid+Ramadhan&background=0dcaf0&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
                     </div>
@@ -248,20 +253,33 @@ session_start();
             </div>
 
             <div class="col-md-6 col-lg-4 fade-in-up delay-3">
-                <div class="team-card">
+                <div class="team-card border-primary" style="border: 2px solid #0d6efd;">
+                    <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">System Analyst</div>
                     <div class="team-avatar">
                         <img src="https://ui-avatars.com/api/?name=Malikhatus+Saniyah&background=6610f2&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
                     </div>
-                    <h5 class="fw-bold mb-1">Malikhatus Saniyah</h5>
+                    <h5 class="fw-bold mb-1">Malihatus Saniyah</h5>
                     <p class="team-role">231111024</p>
                     <p class="small text-muted">Tim Pengembang</p>
                 </div>
             </div>
 
+            <div class="col-md-6 col-lg-4 fade-in-up delay-3">
+                <div class="team-card border-primary" style="border: 2px solid #0d6efd;">
+                    <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">UI/UX Designer</div>
+                    <div class="team-avatar">
+                        <img src="https://ui-avatars.com/api/?name=Nailul+Ashfiya&background=0d6efd&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
+                    </div>
+                    <h5 class="fw-bold mb-1">Nailul Ashfiya</h5>
+                    <p class="team-role">231111003</p>
+                    <p class="small text-muted">Tim Pengembang</p>
+                </div>
+            </div>
+
             <div class="col-md-6 col-lg-4 fade-in-up delay-4">
-                <div class="team-card border-primary">
+                <div class="team-card border-primary" style="border: 2px solid #0d6efd;">
                     <!-- 👆 style="border: 2px solid #0d6efd;" -->
-                    <!-- <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">Dev</div> -->
+                    <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">Backend Dev</div>
                     <div class="team-avatar">
                         <img src="https://ui-avatars.com/api/?name=Muhammad+Muhsin&background=fd7e14&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
                     </div>
@@ -272,7 +290,8 @@ session_start();
             </div>
 
             <div class="col-md-6 col-lg-4 fade-in-up delay-4">
-                <div class="team-card">
+                <div class="team-card border-primary" style="border: 2px solid #0d6efd;">
+                    <div class="position-absolute top-0 end-0 bg-primary text-white px-3 py-1 rounded-bl-3 small" style="border-bottom-left-radius: 10px;">Frontend Dev</div>
                     <div class="team-avatar">
                         <img src="https://ui-avatars.com/api/?name=Raffi+Fadhila&background=20c997&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
                     </div>
