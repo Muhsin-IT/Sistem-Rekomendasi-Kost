@@ -1,4 +1,4 @@
-    <footer class="footer py-4 text-center text-lg-start">
+    <footer class="footer py-4 text-center text-lg-start border border-secondary">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 text-center text-lg-start mb-3 mb-lg-0">

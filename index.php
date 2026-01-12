@@ -2,14 +2,39 @@
 session_start();
 include 'koneksi.php';
 
-// Query Kost
+// KOORDINAT UNU
+$lat_unu = -7.787861880324053;
+$long_unu = 110.33049620439317;
+
+// FUNGSI HITUNG JARAK
+function hitungJarak($lat1, $lon1, $lat2, $lon2)
+{
+    if (!$lat1 || !$lon1) return 0;
+    $theta = $lon1 - $lon2;
+    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+    $dist = acos($dist);
+    $dist = rad2deg($dist);
+    return round($dist * 60 * 1.1515 * 1.609344, 1);
+}
+
+// QUERY DATA
 $query = "SELECT k.*, 
           (SELECT MIN(harga_per_bulan) FROM kamar WHERE id_kost = k.id_kost) as harga_min,
           (SELECT nama_file FROM galeri WHERE id_kost = k.id_kost AND kategori_foto = 'Tampak Depan' LIMIT 1) as foto_depan,
           (SELECT AVG(rating) FROM review WHERE id_kost = k.id_kost) as rating_avg
           FROM kost k
-          ORDER BY k.id_kost DESC LIMIT 6"; // Dilimit 6 agar tidak terlalu panjang di home
+          WHERE k.latitude != 0 AND k.longitude != 0
+          ORDER BY k.id_kost DESC";
 $result = mysqli_query($conn, $query);
+
+$data_map = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $row['foto_tampil']  = $row['foto_depan'] ? "assets/img/galeri/" . $row['foto_depan'] : "https://via.placeholder.com/400x250?text=No+Image";
+    $row['harga_format'] = $row['harga_min'] ? "Rp " . number_format($row['harga_min'], 0, ',', '.') : "Penuh/Hubungi";
+    $row['rating_tampil'] = $row['rating_avg'] ? round($row['rating_avg'], 1) : 0;
+    $row['jarak_kampus']  = hitungJarak($lat_unu, $long_unu, $row['latitude'], $row['longitude']);
+    $data_map[] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -18,146 +43,206 @@ $result = mysqli_query($conn, $query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo/persegi.webp">
-    <title>RadenStay - Cari Kost Dekat UNU Jogja</title>
+    <title>RadenStay - Info Kost UNU Jogja</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css">
+
     <style>
-        /* CSS Variables untuk Palet Warna yang Lebih Lembut */
-        :root {
-            --bg-soft: #f4f7f9;
-            /* Latar belakang abu-abu sangat muda */
-            --text-dark: #2c3e50;
-            /* Teks utama (bukan hitam pekat) */
-            --text-muted: #6c757d;
-            /* Teks sekunder */
-            --brand-blue: #0d6efd;
-            /* Biru utama */
-            --brand-orange: #fd7e14;
-            /* Oranye utama */
-        }
-
-        body {
-            background-color: var(--bg-soft);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: var(--text-dark);
-        }
-
-        /* HERO SECTION RESPONSIF & LEMBUT */
+        /* HERO SECTION (Style Lama) */
         .hero-section {
-            /* Gradien yang sangat halus, tidak menyilaukan */
             background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
-            /* Padding responsif: lebih kecil di HP (py-4), besar di layar lebar (py-lg-5) */
             padding: 3rem 0;
             border-bottom: 1px solid #e1e5eb;
         }
 
-        /* Judul Hero Responsif */
         .hero-title {
             font-weight: 800;
-            color: var(--text-dark);
-            letter-spacing: -0.5px;
-            /* Ukuran font menyesuaikan layar */
+            color: #2c3e50;
             font-size: calc(1.8rem + 1.5vw);
         }
 
-        /* Search Bar Responsif */
         .search-container {
             background: white;
             padding: 8px;
             border-radius: 50px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            /* Bayangan lembut */
             border: 1px solid #eee;
         }
 
         .search-input {
             border: none;
             box-shadow: none !important;
-            font-size: 1rem;
         }
 
         .search-btn {
-            background-color: var(--brand-orange);
+            background-color: #fd7e14;
             border: none;
             padding: 10px 25px;
             border-radius: 30px;
-            transition: all 0.3s;
         }
 
-        .search-btn:hover {
-            background-color: #e36d0a;
-            /* Oranye sedikit lebih gelap saat hover */
-            transform: translateY(-2px);
+        /* SPLIT VIEW LAYOUT */
+        .split-container {
+            display: flex;
+            flex-direction: column;
+            /* Mobile Default */
+            height: auto;
         }
 
-        /* CARD KOST RESPONSIF */
-        .card-kost {
-            border: none;
-            border-radius: 16px;
-            /* Bayangan sangat halus agar tidak terlihat kotor */
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-            background: white;
-            overflow: hidden;
+        /* AREA LIST (KIRI) */
+        .list-area {
+            width: 40%;
             height: 100%;
-            /* Agar tinggi kartu sama */
+            overflow-y: auto;
+            /* Hapus resize: horizontal; */
+            border-right: none;
+            /* Border dipindah ke resizer */
         }
 
-        .card-kost:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        .resizer {
+            width: 18px;
+            /* Lebar area geser */
+            background-color: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            cursor: col-resize;
+            /* Cursor berubah jadi panah kiri-kanan */
+            display: none;
+            /* Hidden di Mobile */
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            user-select: none;
+            transition: background 0.2s;
         }
 
-        .kost-img-wrapper {
-            /* Tinggi gambar responsif: 180px di HP, 200px di Tablet ke atas */
-            height: 180px;
+        .resizer:hover,
+        .resizer.dragging {
+            background-color: #e2e6ea;
+            /* Warna saat di-hover/geser */
+        }
+
+        /* AREA PETA (KANAN - DESKTOP) */
+        .map-wrapper-desktop {
+            display: none;
+            /* Hidden di Mobile */
+            height: 500px;
+            background: #eee;
             position: relative;
         }
 
+        /* WADAH PETA MOBILE (Di dalam Card) */
+        .mobile-map-placeholder {
+            width: 100%;
+            height: 0;
+            transition: height 0.3s;
+            overflow: hidden;
+        }
+
+        .mobile-map-placeholder.active {
+            height: 350px;
+            /* Tinggi Peta di Mobile saat muncul */
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        /* MEDIA QUERY DESKTOP */
         @media (min-width: 768px) {
-            .kost-img-wrapper {
-                height: 200px;
+
+            .resizer {
+                display: flex;
+            }
+
+            .split-container {
+                flex-direction: row;
+                height: calc(100vh - 80px);
+                /* Full height minus navbar */
+                overflow: hidden;
+            }
+
+            .list-area {
+                width: 40%;
+                /* Lebar Awal */
+                height: 100%;
+                overflow-y: auto;
+                border-right: 1px solid #ddd;
+
+                /* FITUR RESIZABLE (BISA DIGESER) */
+                resize: horizontal;
+                min-width: 300px;
+                max-width: 90%;
+            }
+
+            .map-wrapper-desktop {
+                display: block;
+                /* Muncul di Desktop */
+                flex-grow: 1;
+                /* Mengisi sisa ruang */
+                height: 100%;
+            }
+
+            /* Sembunyikan placeholder mobile di desktop agar layout tidak loncat */
+            .mobile-map-placeholder {
+                display: none !important;
             }
         }
 
-        .kost-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        /* ITEM CARD */
+        .card-kost {
+            cursor: pointer;
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            transition: 0.2s;
         }
 
-        .badge-tipe {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(4px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        .card-kost:hover,
+        .card-kost.active {
+            border-color: #0d6efd;
+            background-color: #f8fbff;
         }
 
-        /* Harga yang lebih mudah dilihat */
-        .price-tag {
-            color: var(--brand-blue);
-            font-weight: 800;
-            font-size: 1.25rem;
+        .badge-gender {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 4px;
         }
 
-        .badge-rating {
+        .bg-putra {
+            background: #e7f1ff;
+            color: #0d6efd;
+        }
+
+        .bg-putri {
+            background: #ffeef0;
+            color: #dc3545;
+        }
+
+        .bg-campur {
+            background: #e6fffa;
+            color: #198754;
+        }
+
+        /* ROUTE INFO BOX */
+        .route-info-box {
             position: absolute;
             bottom: 10px;
             left: 10px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: bold;
-            background: rgba(0, 0, 0, 0.7);
-            color: #ffc107;
-            font-size: 0.8rem;
+            z-index: 9999;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            min-width: 200px;
+        }
+
+        .leaflet-routing-container {
+            display: none !important;
         }
     </style>
 </head>
@@ -167,16 +252,16 @@ $result = mysqli_query($conn, $query);
     <?php include 'navbar.php'; ?>
 
     <header class="hero-section text-center text-lg-start">
-        <div class="container py-lg-4">
+        <div class="container py-2">
             <div class="row justify-content-center align-items-center gx-lg-5">
                 <div class="col-lg-7 order-2 order-lg-1">
                     <h1 class="hero-title mb-3">Hunian Nyaman Mahasiswa <span class="text-primary">UNU Jogja</span></h1>
-                    <p class="lead text-muted mb-4" style="font-weight: 400;">Temukan kost strategis, fasilitas lengkap, dan harga yang pas di kantong mahasiswa. Mulai pencarianmu sekarang!</p>
+                    <p class="lead text-muted mb-4" style="font-weight: 400;">Temukan kost strategis, fasilitas lengkap, dan harga yang pas di kantong mahasiswa.</p>
 
                     <div class="search-container d-inline-block w-100" style="max-width: 550px;">
-                        <form action="search" method="GET" class="d-flex align-items-center">
+                        <form action="search.php" method="GET" class="d-flex align-items-center">
                             <i class="bi bi-search text-muted ms-3 fs-5"></i>
-                            <input class="form-control search-input ps-3" type="search" placeholder="Cari nama kost fasilitas atau peraturan..." name="keyword" required>
+                            <input class="form-control search-input ps-3" type="search" placeholder="Cari nama kost, fasilitas (AC, WiFi)..." name="keyword" required>
                             <button class="btn btn-warning text-white fw-bold search-btn" type="submit">CARI</button>
                         </form>
                     </div>
@@ -185,90 +270,346 @@ $result = mysqli_query($conn, $query);
                         <i class="bi bi-info-circle me-1"></i> Populer: "Kost Putra", "Parkiran Mobil", "Kamar Mandi Dalam"
                     </div>
                 </div>
-
-                <div class="col-lg-5 order-1 order-lg-2 mb-4 mb-lg-0 d-none d-md-block">
-                    <img src="https://img.freepik.com/free-vector/college-campus-concept-illustration_114360-1050.jpg?w=740&t=st=1703604000~exp=1703604600~hmac=f20c10..." alt="Ilustrasi Mahasiswa" class="img-fluid rounded-4 shadow-sm" style="opacity: 0.9;">
+                <div class="col-lg-5 order-1 order-lg-2 mb-4 mb-lg-0 d-none d-lg-block">
+                    <img src="https://img.freepik.com/free-vector/college-campus-concept-illustration_114360-1050.jpg" alt="Ilustrasi" class="img-fluid rounded-4 shadow-sm" style="opacity: 0.9;">
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="container my-5 py-3">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-            <div>
-                <h3 class="fw-bold mb-1">Rekomendasi Kost Terbaru</h3>
-                <p class="text-muted mb-0">Pilihan tempat tinggal yang baru ditambahkan.</p>
-            </div>
-            <a href="rekomendasi_saw" class="btn btn-outline-primary rounded-pill px-4 fw-semibold">
-                <i class="bi bi-stars me-1"></i> Coba Rekomendasi Pintar (SAW)
-            </a>
-        </div>
+    <div class="container-fluid px-0 border-top">
+        <div class="split-container">
 
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            <?php while ($row = mysqli_fetch_assoc($result)): ?>
-                <?php $imgSrc = $row['foto_depan'] ? "assets/img/galeri/" . $row['foto_depan'] : "https://via.placeholder.com/400x250?text=Belum+Ada+Foto"; ?>
+            <div class="list-area">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-secondary">Hasil Pencarian</h6>
+                    <a href="rekomendasi_saw.php" class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-stars"></i> Rekomendasi AI</a>
+                </div>
 
-                <div class="col">
-                    <div class="card card-kost h-100">
-                        <div class="kost-img-wrapper">
-                            <img src="<?= $imgSrc ?>" class="kost-img" alt="<?= $row['nama_kost'] ?>">
-                            <span class="badge bg-white text-dark badge-tipe shadow-sm">
-                                <?php if ($row['jenis_kost'] == 'Putra'): ?>
-                                    <i class="bi bi-gender-male text-primary"></i> Putra
-                                <?php elseif ($row['jenis_kost'] == 'Putri'): ?>
-                                    <i class="bi bi-gender-female text-danger"></i> Putri
-                                <?php else: ?>
-                                    <i class="bi bi-gender-ambiguous text-success"></i> Campur
-                                <?php endif; ?>
-                            </span>
-                            <?php if ($row['rating_avg'] > 0): ?>
-                                <span class="badge-rating">
-                                    <i class="bi bi-star-fill"></i> <?= round($row['rating_avg'], 1) ?>
-                                </span>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="card-body p-4 d-flex flex-column">
-                            <h5 class="card-title fw-bold text-dark mb-2"><?= substr($row['nama_kost'], 0, 25) ?><?= strlen($row['nama_kost']) > 25 ? '...' : '' ?></h5>
-
-                            <p class="text-muted small mb-3 flex-grow-1">
-                                <i class="bi bi-geo-alt me-1 text-danger opacity-75"></i>
-                                <?= substr($row['alamat'], 0, 45) ?>...
-                            </p>
-
-                            <hr class="my-3 border-light">
-
-                            <div class="d-flex justify-content-between align-items-end">
-                                <div>
-                                    <small class="text-muted d-block fw-semibold" style="font-size: 0.8rem;">Mulai dari</small>
-                                    <?php if ($row['harga_min']): ?>
-                                        <span class="price-tag">Rp <?= number_format($row['harga_min'], 0, ',', '.') ?></span>
-                                        <small class="text-muted">/bln</small>
-                                    <?php else: ?>
-                                        <span class="text-danger fw-bold small">Penuh/Blm ada kamar</span>
-                                    <?php endif; ?>
+                <div class="d-flex flex-column gap-3">
+                    <?php foreach ($data_map as $index => $row): ?>
+                        <div class="card card-kost shadow-sm p-2" id="card-<?= $index ?>" onclick="handleCardClick(<?= $index ?>, <?= $row['latitude'] ?>, <?= $row['longitude'] ?>)">
+                            <div class="row g-0">
+                                <div class="col-4">
+                                    <img src="<?= $row['foto_tampil'] ?>" class="rounded w-100 h-100 object-fit-cover" style="min-height: 100px;">
                                 </div>
-                                <a href="detail_kost?id=<?= $row['id_kost'] ?>" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" style="font-size: 0.9rem;">
-                                    Detail <i class="bi bi-chevron-right ms-1" style="font-size: 0.8rem;"></i>
-                                </a>
+                                <div class="col-8">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="badge-gender <?= ($row['jenis_kost'] == 'Putra' ? 'bg-putra' : ($row['jenis_kost'] == 'Putri' ? 'bg-putri' : 'bg-campur')) ?>"><?= $row['jenis_kost'] ?></span>
+                                            <?php if ($row['rating_tampil'] > 0): ?>
+                                                <small class="text-warning fw-bold"><i class="bi bi-star-fill"></i> <?= $row['rating_tampil'] ?></small>
+                                            <?php endif; ?>
+                                        </div>
+                                        <h6 class="fw-bold mb-1 text-truncate"><?= $row['nama_kost'] ?></h6>
+                                        <small class="text-muted d-block mb-2" style="font-size: 0.8rem;">
+                                            <i class="bi bi-geo-alt-fill text-danger"></i> <?= substr($row['alamat'], 0, 20) ?>...
+                                            <b>(<?= $row['jarak_kampus'] ?> km)</b>
+                                        </small>
+                                        <div class="d-flex justify-content-between align-items-end">
+                                            <div>
+                                                <small class="text-muted" style="font-size: 0.65rem">Mulai dari</small><br>
+                                                <span class="text-primary fw-bold"><?= $row['harga_format'] ?></span>
+                                            </div>
+                                            <a href="detail_kost.php?id=<?= $row['id_kost'] ?>" class="btn btn-sm btn-primary rounded-pill py-0 px-3" style="font-size: 0.8rem">Detail</a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <div id="mobile-map-target-<?= $index ?>" class="mobile-map-placeholder"></div>
+
                         </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endwhile; ?>
+            </div>
+            <!-- ============================================================================================================= -->
 
-            <?php if (mysqli_num_rows($result) == 0): ?>
-                <div class="col-12 text-center py-5 text-muted">
-                    <img src="https://cdn-icons-png.flaticon.com/512/7465/7465691.png" height="100" class="mb-3 opacity-50">
-                    <h5>Belum ada data kost yang tersedia.</h5>
+            <div class="resizer" id="dragHandle">
+                <i class="bi bi-chevron-right text-secondary small" style="font-size: 10px;"></i>
+            </div>
+            <!-- ============================================================================================================= -->
+            <div class="map-wrapper-desktop" id="desktop-map-container">
+                <div id="map" style="width: 100%; height: 100%;"></div>
+
+                <div id="route-info" class="route-info-box">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-cursor-fill text-primary"></i> Rute & Estimasi</h6>
+                    <div id="route-details" class="small text-dark"></div>
                 </div>
-            <?php endif; ?>
+            </div>
+
         </div>
-    </main>
-
-    <?php include 'footer.php'; ?>
+        <?php include 'footer.php'; ?>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+    <script>
+        const dataKost = <?= json_encode($data_map) ?>;
+        const latUNU = <?= $lat_unu ?>;
+        const longUNU = <?= $long_unu ?>;
+
+        // 1. Setup Peta
+        const map = L.map('map', {
+            zoomControl: false
+        }).setView([latUNU, longUNU], 14);
+        L.control.zoom({
+            position: 'topright'
+        }).addTo(map);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'RadenStay'
+        }).addTo(map);
+
+        // Marker UNU
+        const unuIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
+            iconSize: [40, 40],
+            popupAnchor: [0, -20]
+        });
+        L.marker([latUNU, longUNU], {
+            icon: unuIcon
+        }).addTo(map).bindPopup("<b>Kampus UNU</b><br>Titik Awal");
+
+        let routingControl = null;
+        let markers = [];
+        let activeIndex = -1;
+
+        // 2. LOOP MARKER KOST (BAGIAN YANG DIPERBAIKI)
+        dataKost.forEach((k, index) => {
+            let marker = L.marker([k.latitude, k.longitude]).addTo(map);
+
+            // A. EVENT CLICK MARKER (Langsung Rute)
+            marker.on('click', function() {
+                fokusKeKost(k.latitude, k.longitude, index);
+            });
+
+            // B. POPUP SEDERHANA (Tanpa Tombol)
+            marker.bindPopup(`
+                <div class="text-center pt-2">
+                    <h6 class="fw-bold mb-1">${k.nama_kost}</h6>
+                    <span class="badge bg-primary">${k.harga_format}</span>
+                    <div class="small text-muted mt-1">(Klik pin untuk rute)</div>
+                </div>
+            `);
+
+            markers[index] = marker;
+        });
+
+        // 3. FUNGSI UTAMA
+        function handleCardClick(index, lat, lng) {
+            fokusKeKost(lat, lng, index);
+        }
+
+        function fokusKeKost(destLat, destLng, index) {
+            // A. Highlight List di Kiri
+            document.querySelectorAll('.card-kost').forEach(c => c.classList.remove('active'));
+            const card = document.getElementById(`card-${index}`);
+            if (card) card.classList.add('active');
+
+            // Scroll List ke Card yang dipilih (Desktop Only)
+            if (window.innerWidth >= 768 && card) {
+                card.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+
+            // B. Logika Mobile: Pindahkan Peta ke Bawah Card
+            const isMobile = window.innerWidth < 768;
+            const mapEl = document.getElementById('map');
+            const routeBox = document.getElementById('route-info');
+
+            // Simpan posisi scroll window saat ini agar tidak loncat
+            const scrollY = window.scrollY;
+
+            if (isMobile) {
+                // Reset placeholder lain
+                document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
+
+                // Pindahkan Peta
+                const targetContainer = document.getElementById(`mobile-map-target-${index}`);
+                if (targetContainer && !targetContainer.contains(mapEl)) {
+                    targetContainer.appendChild(mapEl);
+                    targetContainer.appendChild(routeBox);
+                    targetContainer.classList.add('active');
+
+                    // Refresh ukuran peta karena wadah berubah
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 50);
+                }
+            } else {
+                // Desktop: Pastikan peta di kanan
+                const desktopContainer = document.getElementById('desktop-map-container');
+                if (!desktopContainer.contains(mapEl)) {
+                    desktopContainer.appendChild(mapEl);
+                    desktopContainer.appendChild(routeBox);
+                }
+            }
+
+            activeIndex = index;
+
+            // C. Fokus Peta & Gambar Rute
+            // Gunakan panTo agar lebih smooth daripada flyTo jarak dekat
+            map.flyTo([destLat, destLng], 15, {
+                duration: 1.2
+            });
+
+            // Buka Popup Marker
+            if (markers[index]) {
+                markers[index].openPopup();
+            }
+
+            // D. Routing Machine
+            if (routingControl) map.removeControl(routingControl);
+
+            routingControl = L.Routing.control({
+                    waypoints: [L.latLng(latUNU, longUNU), L.latLng(destLat, destLng)],
+                    routeWhileDragging: false,
+                    addWaypoints: false,
+                    draggableWaypoints: false,
+                    fitSelectedRoutes: false, // Jangan auto zoom-out kejauhan
+                    lineOptions: {
+                        styles: [{
+                            color: '#0d6efd',
+                            opacity: 0.8,
+                            weight: 6
+                        }]
+                    },
+                    createMarker: function() {
+                        return null;
+                    },
+                    show: false
+                })
+                .on('routesfound', function(e) {
+                    var summary = e.routes[0].summary;
+                    let jarak = (summary.totalDistance / 1000).toFixed(1);
+                    let waktu = Math.round(summary.totalTime / 60);
+
+                    routeBox.style.display = 'block';
+                    document.getElementById('route-details').innerHTML = `Jarak: <b>${jarak} km</b> • Waktu: <b>${waktu} mnt</b>`;
+                })
+                .addTo(map);
+        }
+
+        // --- SCRIPT RESIZER ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const resizer = document.getElementById('dragHandle');
+            const leftSide = document.querySelector('.list-area');
+            const container = document.querySelector('.split-container');
+
+            if (!resizer) return;
+
+            let x = 0;
+            let leftWidth = 0;
+
+            const mouseDownHandler = function(e) {
+                x = e.clientX;
+                leftWidth = leftSide.getBoundingClientRect().width;
+                resizer.classList.add('dragging');
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+                document.getElementById('map').style.pointerEvents = 'none'; // Matikan interaksi peta saat geser
+            };
+
+            const mouseMoveHandler = function(e) {
+                const dx = e.clientX - x;
+                const containerWidth = container.getBoundingClientRect().width;
+                let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
+                if (newLeftWidth < 25) newLeftWidth = 25; // Batas Min
+                if (newLeftWidth > 70) newLeftWidth = 70; // Batas Max
+                leftSide.style.width = `${newLeftWidth}%`;
+                map.invalidateSize(); // Penting!
+            };
+
+            const mouseUpHandler = function() {
+                resizer.classList.remove('dragging');
+                document.getElementById('map').style.pointerEvents = 'auto'; // Hidupkan peta lagi
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            };
+
+            resizer.addEventListener('mousedown', mouseDownHandler);
+
+            // Fix Layout saat Resize Window
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768) {
+                    const mapEl = document.getElementById('map');
+                    const routeBox = document.getElementById('route-info');
+                    const desktopContainer = document.getElementById('desktop-map-container');
+                    if (!desktopContainer.contains(mapEl)) {
+                        desktopContainer.appendChild(mapEl);
+                        desktopContainer.appendChild(routeBox);
+                        document.querySelectorAll('.mobile-map-placeholder').forEach(el => el.classList.remove('active'));
+                        map.invalidateSize();
+                    }
+                }
+            });
+        });
+    </script>
+    <script>
+        // === SCRIPT RESIZER (GESER LEBAR LIST) ===
+        document.addEventListener('DOMContentLoaded', function() {
+            const resizer = document.getElementById('dragHandle');
+            const leftSide = document.querySelector('.list-area');
+            const rightSide = document.querySelector('.map-wrapper-desktop');
+            const container = document.querySelector('.split-container');
+
+            // Posisi awal
+            let x = 0;
+            let leftWidth = 0;
+
+            const mouseDownHandler = function(e) {
+                // Ambil posisi mouse saat ini
+                x = e.clientX;
+                leftWidth = leftSide.getBoundingClientRect().width;
+
+                // Tambahkan class agar visual tetap highlight saat geser cepat
+                resizer.classList.add('dragging');
+
+                // Pasang event listener ke document
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+
+                // Matikan iframe events (peta) sementara agar tidak mengganggu drag
+                document.getElementById('map').style.pointerEvents = 'none';
+            };
+
+            const mouseMoveHandler = function(e) {
+                // Hitung seberapa jauh mouse bergerak
+                const dx = e.clientX - x;
+                const containerWidth = container.getBoundingClientRect().width;
+
+                // Hitung persentase lebar baru
+                let newLeftWidth = ((leftWidth + dx) * 100) / containerWidth;
+
+                // Batasi minimal 20% dan maksimal 70% agar tidak rusak
+                if (newLeftWidth < 20) newLeftWidth = 20;
+                if (newLeftWidth > 70) newLeftWidth = 70;
+
+                leftSide.style.width = `${newLeftWidth}%`;
+
+                // PENTING: Refresh ukuran peta Leaflet agar tidak error/grey
+                if (typeof map !== 'undefined') map.invalidateSize();
+            };
+
+            const mouseUpHandler = function() {
+                resizer.classList.remove('dragging');
+                document.getElementById('map').style.pointerEvents = 'auto'; // Hidupkan peta lagi
+
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            };
+
+            // Pasang listener hanya jika elemen ada (Desktop)
+            if (resizer) {
+                resizer.addEventListener('mousedown', mouseDownHandler);
+            }
+        });
+    </script>
 </body>
 
 </html>
