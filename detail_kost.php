@@ -83,187 +83,217 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
 <html lang="id">
 
 <head></head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo/persegi.webp">
-    <title><?= $kost['nama_kost'] ?> - Detail Kost</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo/persegi.webp">
+<title><?= $kost['nama_kost'] ?> - Detail Kost</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
-    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        body {
-            background-color: #f4f7f9;
-            color: #2c3e50;
-        }
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+<link rel="stylesheet" href="style.css">
+<style>
+    body {
+        background-color: #f4f7f9;
+        color: #2c3e50;
+    }
 
-        .gallery-container {
-            height: 400px;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 8px;
-            border-radius: 16px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 15px;
-        }
+    .gallery-container {
+        height: 400px;
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 8px;
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        margin-bottom: 15px;
+    }
 
-        .gallery-slot {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
+    .gallery-slot {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
 
-        .gallery-slot.main-img {
-            grid-row: 1 / 3;
-        }
+    .gallery-slot.main-img {
+        grid-row: 1 / 3;
+    }
 
-        .gallery-item {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+    .gallery-item {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: pointer;
+        transition: 0.3s;
+    }
 
-        .gallery-item:hover {
-            transform: scale(1.02);
-        }
+    .gallery-item:hover {
+        transform: scale(1.02);
+    }
 
-        .kategori-foto-pill {
-            position: absolute;
-            top: 0.75rem;
-            left: 0.75rem;
-            padding: 0.25rem 0.9rem;
-            background: rgba(0, 0, 0, 0.7);
-            color: #fff;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            letter-spacing: 0.2px;
-        }
+    .kategori-foto-pill {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        padding: 0.25rem 0.9rem;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        letter-spacing: 0.2px;
+    }
 
-        .card-custom {
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-            background: white;
-        }
+    .card-custom {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        background: white;
+    }
 
-        #map-detail {
-            height: 400px;
-            width: 100%;
-            border-radius: 12px;
-            position: relative;
-        }
+    #map-detail {
+        height: 400px;
+        width: 100%;
+        border-radius: 12px;
+        position: relative;
+    }
 
-        .route-info-box {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            z-index: 9999;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            min-width: 200px;
-        }
+    .route-info-box {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 9999;
+        background: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        min-width: 200px;
+    }
 
-        .leaflet-routing-container {
-            display: none !important;
-        }
+    .leaflet-routing-container {
+        display: none !important;
+    }
 
-        .panorama-container {
-            width: 100%;
-            height: 400px;
-            border-radius: 10px;
-        }
+    .panorama-container {
+        width: 100%;
+        height: 400px;
+        border-radius: 10px;
+    }
 
-        /* MODAL FULLSCREEN STYLE */
-        .modal-fullscreen .modal-body {
-            padding: 0;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
+    /* MODAL FULLSCREEN STYLE */
+    .modal-fullscreen .modal-body {
+        padding: 0;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
 
-        .carousel-fs-item {
-            height: 100vh;
-            width: 100%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #000;
-        }
+    .carousel-fs-item {
+        height: 100vh;
+        width: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+    }
 
-        .fs-img {
-            max-height: 100%;
-            max-width: 100%;
-            object-fit: contain;
-        }
+    .fs-img {
+        max-height: 100%;
+        max-width: 100%;
+        object-fit: contain;
+    }
 
-        .carousel-caption h5 {
-            background-color: rgba(0, 0, 0, 0.6);
-            /* Warna hitam transparansi 60% */
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            /* Membuat sudut membulat */
-            display: inline-block;
-            /* Agar background membungkus teks saja, bukan selebar layar */
-            backdrop-filter: blur(5px);
-            /* Efek blur di belakang teks (opsional, biar keren) */
-            margin-bottom: 20px;
-        }
+    .carousel-caption h5 {
+        background-color: rgba(0, 0, 0, 0.6);
+        /* Warna hitam transparansi 60% */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        /* Membuat sudut membulat */
+        display: inline-block;
+        /* Agar background membungkus teks saja, bukan selebar layar */
+        backdrop-filter: blur(5px);
+        /* Efek blur di belakang teks (opsional, biar keren) */
+        margin-bottom: 20px;
+    }
 
-        /*============================= Review Styles =====================================*/
-        .rating-box {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #eee;
-            text-align: center;
-        }
+    /*============================= Review Styles =====================================*/
+    .rating-box {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #eee;
+        text-align: center;
+    }
 
-        .rating-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #0d6efd;
-            line-height: 1;
-        }
+    .rating-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #0d6efd;
+        line-height: 1;
+    }
 
-        .review-item {
-            border-bottom: 1px solid #f0f0f0;
-            padding: 15px 0;
-        }
+    .review-item {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 15px 0;
+    }
 
-        .review-item:last-child {
-            border-bottom: none;
-        }
+    .review-item:last-child {
+        border-bottom: none;
+    }
 
-        .avatar-review {
-            width: 40px;
-            height: 40px;
-            background: #e9ecef;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: #0d6efd;
-        }
+    .avatar-review {
+        width: 40px;
+        height: 40px;
+        background: #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #0d6efd;
+    }
 
-        /*============================= /Review Styles =====================================*/
-    </style>
+    /*============================= /Review Styles =====================================*/
+
+    .nearby-place-item {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+
+    .nearby-place-item:hover {
+        background: #f8f9fa;
+    }
+
+    .nearby-place-item:last-child {
+        border-bottom: none;
+    }
+
+    .nearby-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .loading-spinner {
+        text-align: center;
+        padding: 20px;
+    }
+</style>
 </head>
 
 <body>
@@ -422,6 +452,19 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                         </div>
                         <div class="alert alert-info mb-3 py-2">
                             <small><i class="bi bi-info-circle"></i> Jarak dari kampus UNU: <strong><?= $jarak ?> km</strong></small>
+                        </div>
+
+                        <!-- TEMPAT TERDEKAT -->
+                        <div class="mt-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-shop"></i> Tempat Terdekat (1 km)</h6>
+                            <div id="nearby-places-container">
+                                <div class="loading-spinner">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="small text-muted mt-2">Mencari fasilitas sekitar...</p>
+                                </div>
+                            </div>
                         </div>
                     <?php endif; ?>
                     <hr>
@@ -615,6 +658,226 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                     padding: [50, 50]
                 });
             }, 500);
+
+            // ============================================
+            // FUNGSI PENCARIAN TEMPAT TERDEKAT
+            // ============================================
+
+            function hitungJarakJS(lat1, lon1, lat2, lon2) {
+                const R = 6371; // Radius bumi dalam km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return (R * c).toFixed(1);
+            }
+
+            function getIconAndColor(category) {
+                const icons = {
+                    'kesehatan': {
+                        icon: 'bi-hospital',
+                        color: '#dc3545',
+                        bg: '#ffe5e8'
+                    },
+                    'minimarket': {
+                        icon: 'bi-cart3',
+                        color: '#198754',
+                        bg: '#e6f9f0'
+                    },
+                    'kuliner': {
+                        icon: 'bi-cup-hot',
+                        color: '#fd7e14',
+                        bg: '#fff4e6'
+                    },
+                    'bank': {
+                        icon: 'bi-credit-card',
+                        color: '#0dcaf0',
+                        bg: '#e5f9ff'
+                    },
+                    'ibadah': {
+                        icon: 'bi-brightness-high',
+                        color: '#6f42c1',
+                        bg: '#f3ebff'
+                    },
+                    'print': {
+                        icon: 'bi-printer',
+                        color: '#20c997',
+                        bg: '#e6fff8'
+                    },
+                    'transportasi': {
+                        icon: 'bi-bus-front',
+                        color: '#0d6efd',
+                        bg: '#e7f1ff'
+                    }
+                };
+                return icons[category] || {
+                    icon: 'bi-pin-map',
+                    color: '#6c757d',
+                    bg: '#f0f0f0'
+                };
+            }
+
+            function formatNamaTempat(name) {
+                if (!name) return 'Tanpa Nama';
+                return name.length > 35 ? name.substring(0, 35) + '...' : name;
+            }
+
+            async function cariTempatTerdekat() {
+                const radius = 1000; // 1 km dalam meter
+
+                // Query Overpass API
+                const query = `
+                [out:json][timeout:25];
+                (
+                  // Kesehatan
+                  node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
+                  way["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
+                  
+                  // Minimarket
+                  node["shop"~"convenience|supermarket"]["name"~"Indomaret|Alfamart|Alfamidi|Circle K|Lawson|Tomira",i](around:${radius},${latKost},${longKost});
+                  way["shop"~"convenience|supermarket"]["name"~"Indomaret|Alfamart|Alfamidi|Circle K|Lawson|Tomira",i](around:${radius},${latKost},${longKost});
+                  
+                  // Kuliner
+                  node["amenity"~"restaurant|cafe|fast_food|food_court"](around:${radius},${latKost},${longKost});
+                  way["amenity"~"restaurant|cafe|fast_food|food_court"](around:${radius},${latKost},${longKost});
+                  
+                  // Bank/ATM
+                  node["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
+                  way["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
+                  
+                  // Tempat Ibadah
+                  node["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
+                  way["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
+                  
+                  // Print/Fotocopy
+                  node["shop"~"copyshop|stationery"]["service"~"print|copy",i](around:${radius},${latKost},${longKost});
+                  way["shop"~"copyshop|stationery"]["service"~"print|copy",i](around:${radius},${latKost},${longKost});
+                  
+                  // Transportasi
+                  node["amenity"~"fuel|bus_station|parking"]["highway"="bus_stop"](around:${radius},${latKost},${longKost});
+                  way["amenity"~"fuel|bus_station|parking"](around:${radius},${latKost},${longKost});
+                );
+                out body;
+                >;
+                out skel qt;
+                `;
+
+                try {
+                    const response = await fetch('https://overpass-api.de/api/interpreter', {
+                        method: 'POST',
+                        body: query
+                    });
+
+                    const data = await response.json();
+                    const places = [];
+
+                    data.elements.forEach(el => {
+                        let lat, lon;
+                        if (el.type === 'node') {
+                            lat = el.lat;
+                            lon = el.lon;
+                        } else if (el.type === 'way' && el.center) {
+                            lat = el.center.lat;
+                            lon = el.center.lon;
+                        } else {
+                            return;
+                        }
+
+                        const jarak = hitungJarakJS(latKost, longKost, lat, lon);
+
+                        // Kategorisasi
+                        let category = 'lainnya';
+                        if (el.tags.amenity === 'hospital' || el.tags.amenity === 'clinic' ||
+                            el.tags.amenity === 'pharmacy' || el.tags.amenity === 'doctors') {
+                            category = 'kesehatan';
+                        } else if (el.tags.shop === 'convenience' || el.tags.shop === 'supermarket') {
+                            category = 'minimarket';
+                        } else if (el.tags.amenity === 'restaurant' || el.tags.amenity === 'cafe' ||
+                            el.tags.amenity === 'fast_food' || el.tags.amenity === 'food_court') {
+                            category = 'kuliner';
+                        } else if (el.tags.amenity === 'bank' || el.tags.amenity === 'atm') {
+                            category = 'bank';
+                        } else if (el.tags.amenity === 'place_of_worship') {
+                            category = 'ibadah';
+                        } else if (el.tags.shop === 'copyshop' || el.tags.shop === 'stationery') {
+                            category = 'print';
+                        } else if (el.tags.amenity === 'fuel' || el.tags.amenity === 'bus_station' ||
+                            el.tags.highway === 'bus_stop' || el.tags.amenity === 'parking') {
+                            category = 'transportasi';
+                        }
+
+                        places.push({
+                            name: el.tags.name || el.tags.brand || 'Tanpa Nama',
+                            category: category,
+                            jarak: parseFloat(jarak),
+                            lat: lat,
+                            lon: lon
+                        });
+                    });
+
+                    // Sort by jarak
+                    places.sort((a, b) => a.jarak - b.jarak);
+
+                    // Ambil max 10 terdekat
+                    const topPlaces = places.slice(0, 10);
+
+                    tampilkanTempatTerdekat(topPlaces);
+
+                } catch (error) {
+                    console.error('Error fetching nearby places:', error);
+                    document.getElementById('nearby-places-container').innerHTML = `
+                        <div class="alert alert-warning small py-2 mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> Gagal memuat data tempat terdekat.
+                        </div>
+                    `;
+                }
+            }
+
+            function tampilkanTempatTerdekat(places) {
+                const container = document.getElementById('nearby-places-container');
+
+                if (places.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-light small py-2 mb-0 text-center">
+                            <i class="bi bi-info-circle"></i> Tidak ada fasilitas dalam radius 1 km.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="list-group list-group-flush">';
+
+                places.forEach(place => {
+                    const iconData = getIconAndColor(place.category);
+                    const jarakText = place.jarak < 1 ?
+                        `${(place.jarak * 1000).toFixed(0)} m` :
+                        `${place.jarak} km`;
+
+                    html += `
+                        <div class="nearby-place-item d-flex align-items-center gap-3">
+                            <div class="nearby-icon" style="background: ${iconData.bg}; color: ${iconData.color}">
+                                <i class="bi ${iconData.icon}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-bold" style="font-size: 0.85rem">${formatNamaTempat(place.name)}</h6>
+                                <small class="text-muted" style="font-size: 0.75rem">
+                                    <i class="bi bi-geo-alt"></i> ${jarakText}
+                                </small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            }
+
+            // Jalankan pencarian saat halaman load
+            setTimeout(() => {
+                cariTempatTerdekat();
+            }, 1000);
         </script>
     <?php endif; ?>
 
