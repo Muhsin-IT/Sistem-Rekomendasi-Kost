@@ -265,7 +265,7 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
     /*============================= /Review Styles =====================================*/
 
     .nearby-place-item {
-        padding: 12px;
+        padding: 10px;
         border-bottom: 1px solid #f0f0f0;
         transition: background 0.2s;
         cursor: pointer;
@@ -280,13 +280,38 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
     }
 
     .nearby-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+
+    .nearby-list-container {
+        max-height: 320px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .nearby-list-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .nearby-list-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .nearby-list-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+
+    .nearby-list-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
     }
 
     .loading-spinner {
@@ -616,6 +641,9 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                 icon: kostIcon
             }).addTo(map).bindPopup("<b><?= $kost['nama_kost'] ?></b>");
 
+            // Array untuk menyimpan marker tempat terdekat
+            let nearbyMarkers = [];
+
             // Routing dari UNU ke Kost
             const routingControl = L.Routing.control({
                 waypoints: [
@@ -682,22 +710,22 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                         bg: '#ffe5e8'
                     },
                     'minimarket': {
-                        icon: 'bi-cart3',
+                        icon: 'bi-shop',
                         color: '#198754',
                         bg: '#e6f9f0'
                     },
                     'kuliner': {
-                        icon: 'bi-cup-hot',
+                        icon: 'bi-cup-straw',
                         color: '#fd7e14',
                         bg: '#fff4e6'
                     },
                     'bank': {
-                        icon: 'bi-credit-card',
+                        icon: 'bi-bank',
                         color: '#0dcaf0',
                         bg: '#e5f9ff'
                     },
                     'ibadah': {
-                        icon: 'bi-brightness-high',
+                        icon: 'bi-moon-stars',
                         color: '#6f42c1',
                         bg: '#f3ebff'
                     },
@@ -707,13 +735,13 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                         bg: '#e6fff8'
                     },
                     'transportasi': {
-                        icon: 'bi-bus-front',
+                        icon: 'bi-fuel-pump',
                         color: '#0d6efd',
                         bg: '#e7f1ff'
                     }
                 };
                 return icons[category] || {
-                    icon: 'bi-pin-map',
+                    icon: 'bi-geo-alt',
                     color: '#6c757d',
                     bg: '#f0f0f0'
                 };
@@ -721,60 +749,138 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
 
             function formatNamaTempat(name) {
                 if (!name) return 'Tanpa Nama';
-                return name.length > 35 ? name.substring(0, 35) + '...' : name;
+                return name.length > 30 ? name.substring(0, 30) + '...' : name;
+            }
+
+            // FUNGSI UNTUK MEMBUAT MARKER ICON CUSTOM
+            function createCustomMarkerIcon(category) {
+                const iconData = getIconAndColor(category);
+
+                // Buat HTML icon dengan Bootstrap Icons
+                const iconHtml = `
+                    <div style="
+                        background: ${iconData.bg};
+                        color: ${iconData.color};
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 2px solid ${iconData.color};
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        font-size: 14px;
+                    ">
+                        <i class="bi ${iconData.icon}"></i>
+                    </div>
+                `;
+
+                return L.divIcon({
+                    html: iconHtml,
+                    className: 'custom-marker-icon',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14],
+                    popupAnchor: [0, -14]
+                });
+            }
+
+            // FUNGSI UNTUK MENAMPILKAN MARKER DI PETA
+            function tampilkanMarkerDiPeta(places) {
+                // Hapus marker lama
+                nearbyMarkers.forEach(marker => map.removeLayer(marker));
+                nearbyMarkers = [];
+
+                // Tambah marker baru untuk setiap tempat
+                places.forEach(place => {
+                    const customIcon = createCustomMarkerIcon(place.category);
+
+                    const marker = L.marker([place.lat, place.lon], {
+                        icon: customIcon
+                    }).addTo(map);
+
+                    const jarakText = place.jarak < 1 ?
+                        `${(place.jarak * 1000).toFixed(0)} m` :
+                        `${place.jarak} km`;
+
+                    // Popup dengan info tempat
+                    marker.bindPopup(`
+                        <div style="min-width: 150px;">
+                            <h6 class="fw-bold mb-1" style="font-size: 0.85rem;">${place.name}</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-geo-alt"></i> ${jarakText} dari kost
+                            </small>
+                        </div>
+                    `);
+
+                    nearbyMarkers.push(marker);
+                });
+
+                console.log(`✅ ${nearbyMarkers.length} marker ditambahkan ke peta`);
             }
 
             async function cariTempatTerdekat() {
                 const radius = 1000; // 1 km dalam meter
 
-                // Query Overpass API
+                // QUERY YANG DIPERBAIKI & DISEDERHANAKAN
                 const query = `
-                [out:json][timeout:25];
-                (
-                  // Kesehatan
-                  node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
-                  way["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
-                  
-                  // Minimarket
-                  node["shop"~"convenience|supermarket"]["name"~"Indomaret|Alfamart|Alfamidi|Circle K|Lawson|Tomira",i](around:${radius},${latKost},${longKost});
-                  way["shop"~"convenience|supermarket"]["name"~"Indomaret|Alfamart|Alfamidi|Circle K|Lawson|Tomira",i](around:${radius},${latKost},${longKost});
-                  
-                  // Kuliner
-                  node["amenity"~"restaurant|cafe|fast_food|food_court"](around:${radius},${latKost},${longKost});
-                  way["amenity"~"restaurant|cafe|fast_food|food_court"](around:${radius},${latKost},${longKost});
-                  
-                  // Bank/ATM
-                  node["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
-                  way["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
-                  
-                  // Tempat Ibadah
-                  node["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
-                  way["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
-                  
-                  // Print/Fotocopy
-                  node["shop"~"copyshop|stationery"]["service"~"print|copy",i](around:${radius},${latKost},${longKost});
-                  way["shop"~"copyshop|stationery"]["service"~"print|copy",i](around:${radius},${latKost},${longKost});
-                  
-                  // Transportasi
-                  node["amenity"~"fuel|bus_station|parking"]["highway"="bus_stop"](around:${radius},${latKost},${longKost});
-                  way["amenity"~"fuel|bus_station|parking"](around:${radius},${latKost},${longKost});
-                );
-                out body;
-                >;
-                out skel qt;
-                `;
+[out:json][timeout:25];
+(
+  node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
+  way["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
+  
+  node["shop"="convenience"](around:${radius},${latKost},${longKost});
+  way["shop"="convenience"](around:${radius},${latKost},${longKost});
+  node["shop"="supermarket"](around:${radius},${latKost},${longKost});
+  way["shop"="supermarket"](around:${radius},${latKost},${longKost});
+  
+  node["amenity"~"restaurant|cafe|fast_food"](around:${radius},${latKost},${longKost});
+  way["amenity"~"restaurant|cafe|fast_food"](around:${radius},${latKost},${longKost});
+  
+  node["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
+  way["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
+  
+  node["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
+  way["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
+  
+  node["shop"="copyshop"](around:${radius},${latKost},${longKost});
+  way["shop"="copyshop"](around:${radius},${latKost},${longKost});
+  node["shop"="stationery"](around:${radius},${latKost},${longKost});
+  way["shop"="stationery"](around:${radius},${latKost},${longKost});
+  
+  node["amenity"="fuel"](around:${radius},${latKost},${longKost});
+  way["amenity"="fuel"](around:${radius},${latKost},${longKost});
+  node["highway"="bus_stop"](around:${radius},${latKost},${longKost});
+  node["amenity"="parking"](around:${radius},${latKost},${longKost});
+  way["amenity"="parking"](around:${radius},${latKost},${longKost});
+);
+out center;
+`;
+
+                console.log('🔍 Mencari tempat terdekat...'); // Debug log
 
                 try {
                     const response = await fetch('https://overpass-api.de/api/interpreter', {
                         method: 'POST',
-                        body: query
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: 'data=' + encodeURIComponent(query)
                     });
 
+                    console.log('📡 Response status:', response.status); // Debug log
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const data = await response.json();
+                    console.log('📦 Data diterima:', data.elements.length, 'tempat'); // Debug log
+
                     const places = [];
 
                     data.elements.forEach(el => {
                         let lat, lon;
+
                         if (el.type === 'node') {
                             lat = el.lat;
                             lon = el.lon;
@@ -785,31 +891,44 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                             return;
                         }
 
+                        if (!lat || !lon) return;
+
                         const jarak = hitungJarakJS(latKost, longKost, lat, lon);
 
                         // Kategorisasi
                         let category = 'lainnya';
-                        if (el.tags.amenity === 'hospital' || el.tags.amenity === 'clinic' ||
-                            el.tags.amenity === 'pharmacy' || el.tags.amenity === 'doctors') {
+                        const tags = el.tags || {};
+
+                        if (tags.amenity === 'hospital' || tags.amenity === 'clinic' ||
+                            tags.amenity === 'pharmacy' || tags.amenity === 'doctors') {
                             category = 'kesehatan';
-                        } else if (el.tags.shop === 'convenience' || el.tags.shop === 'supermarket') {
+                        } else if (tags.shop === 'convenience' || tags.shop === 'supermarket') {
                             category = 'minimarket';
-                        } else if (el.tags.amenity === 'restaurant' || el.tags.amenity === 'cafe' ||
-                            el.tags.amenity === 'fast_food' || el.tags.amenity === 'food_court') {
+                        } else if (tags.amenity === 'restaurant' || tags.amenity === 'cafe' ||
+                            tags.amenity === 'fast_food') {
                             category = 'kuliner';
-                        } else if (el.tags.amenity === 'bank' || el.tags.amenity === 'atm') {
+                        } else if (tags.amenity === 'bank' || tags.amenity === 'atm') {
                             category = 'bank';
-                        } else if (el.tags.amenity === 'place_of_worship') {
+                        } else if (tags.amenity === 'place_of_worship') {
                             category = 'ibadah';
-                        } else if (el.tags.shop === 'copyshop' || el.tags.shop === 'stationery') {
+                        } else if (tags.shop === 'copyshop' || tags.shop === 'stationery') {
                             category = 'print';
-                        } else if (el.tags.amenity === 'fuel' || el.tags.amenity === 'bus_station' ||
-                            el.tags.highway === 'bus_stop' || el.tags.amenity === 'parking') {
+                        } else if (tags.amenity === 'fuel' || tags.highway === 'bus_stop' ||
+                            tags.amenity === 'parking') {
                             category = 'transportasi';
                         }
 
+                        // Nama tempat dengan prioritas
+                        let name = tags.name || tags.brand || tags.operator || tags['addr:housename'] || 'Tanpa Nama';
+
+                        // Tambahkan info tipe untuk tempat tanpa nama
+                        if (name === 'Tanpa Nama') {
+                            if (tags.amenity) name = tags.amenity.charAt(0).toUpperCase() + tags.amenity.slice(1);
+                            else if (tags.shop) name = tags.shop.charAt(0).toUpperCase() + tags.shop.slice(1);
+                        }
+
                         places.push({
-                            name: el.tags.name || el.tags.brand || 'Tanpa Nama',
+                            name: name,
                             category: category,
                             jarak: parseFloat(jarak),
                             lat: lat,
@@ -817,19 +936,32 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                         });
                     });
 
+                    console.log('✅ Total places found:', places.length); // Debug log
+
                     // Sort by jarak
                     places.sort((a, b) => a.jarak - b.jarak);
 
-                    // Ambil max 10 terdekat
-                    const topPlaces = places.slice(0, 10);
+                    // Ambil max 12 terdekat
+                    const topPlaces = places.slice(0, 12);
 
+                    // TAMPILKAN DI LIST & PETA
                     tampilkanTempatTerdekat(topPlaces);
+                    tampilkanMarkerDiPeta(topPlaces); // TAMBAHAN BARU
 
                 } catch (error) {
-                    console.error('Error fetching nearby places:', error);
+                    console.error('❌ Error fetching nearby places:', error);
+                    console.error('Error details:', error.message);
+
+                    // Tampilkan pesan error yang lebih spesifik
                     document.getElementById('nearby-places-container').innerHTML = `
                         <div class="alert alert-warning small py-2 mb-0">
-                            <i class="bi bi-exclamation-triangle"></i> Gagal memuat data tempat terdekat.
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            <strong>Gagal memuat data</strong><br>
+                            <small class="text-muted">${error.message || 'API Overpass tidak merespons'}</small>
+                            <br>
+                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="cariTempatTerdekat()">
+                                <i class="bi bi-arrow-clockwise"></i> Coba Lagi
+                            </button>
                         </div>
                     `;
                 }
@@ -847,22 +979,22 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                     return;
                 }
 
-                let html = '<div class="list-group list-group-flush">';
+                let html = '<div class="nearby-list-container"><div class="list-group list-group-flush">';
 
-                places.forEach(place => {
+                places.forEach((place, idx) => {
                     const iconData = getIconAndColor(place.category);
                     const jarakText = place.jarak < 1 ?
                         `${(place.jarak * 1000).toFixed(0)} m` :
                         `${place.jarak} km`;
 
                     html += `
-                        <div class="nearby-place-item d-flex align-items-center gap-3">
+                        <div class="nearby-place-item d-flex align-items-center gap-2" onclick="focusOnMarker(${idx})">
                             <div class="nearby-icon" style="background: ${iconData.bg}; color: ${iconData.color}">
                                 <i class="bi ${iconData.icon}"></i>
                             </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-0 fw-bold" style="font-size: 0.85rem">${formatNamaTempat(place.name)}</h6>
-                                <small class="text-muted" style="font-size: 0.75rem">
+                            <div class="flex-grow-1 overflow-hidden">
+                                <h6 class="mb-0 fw-bold text-truncate" style="font-size: 0.8rem">${formatNamaTempat(place.name)}</h6>
+                                <small class="text-muted" style="font-size: 0.7rem">
                                     <i class="bi bi-geo-alt"></i> ${jarakText}
                                 </small>
                             </div>
@@ -870,14 +1002,37 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                     `;
                 });
 
-                html += '</div>';
+                html += '</div></div>';
+
+                // Tambahkan info jumlah total jika lebih dari yang ditampilkan
+                if (places.length > 5) {
+                    html += `<div class="text-center mt-2">
+                        <small class="text-muted" style="font-size: 0.7rem">
+                            <i class="bi bi-arrow-down-circle"></i> Scroll untuk lihat ${places.length} tempat
+                        </small>
+                    </div>`;
+                }
+
                 container.innerHTML = html;
             }
 
-            // Jalankan pencarian saat halaman load
+            // FUNGSI UNTUK FOKUS KE MARKER SAAT ITEM DIKLIK
+            function focusOnMarker(index) {
+                if (nearbyMarkers[index]) {
+                    const marker = nearbyMarkers[index];
+                    map.flyTo(marker.getLatLng(), 16, {
+                        duration: 0.8
+                    });
+                    setTimeout(() => {
+                        marker.openPopup();
+                    }, 900);
+                }
+            }
+
+            // Jalankan pencarian saat halaman load dengan delay lebih lama
             setTimeout(() => {
                 cariTempatTerdekat();
-            }, 1000);
+            }, 2000); // Ubah dari 1000 ke 2000ms
         </script>
     <?php endif; ?>
 
