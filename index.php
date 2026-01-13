@@ -52,7 +52,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css">
 
-    <!-- <style>
+    <style>
         /* HERO SECTION (Style Lama) */
         .hero-section {
             background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
@@ -167,7 +167,7 @@ while ($row = mysqli_fetch_assoc($result)) {
             }
 
             .list-area {
-                width: 40%;
+                width: 60%;
                 /* Lebar Awal */
                 height: 100%;
                 overflow-y: auto;
@@ -452,23 +452,6 @@ while ($row = mysqli_fetch_assoc($result)) {
                 min-height: 130px;
             }
         }
-
-        .route-info-box {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            z-index: 9999;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: none;
-            min-width: 200px;
-        }
-
-        .leaflet-routing-container {
-            display: none !important;
-        }
     </style>
 </head>
 
@@ -598,18 +581,49 @@ while ($row = mysqli_fetch_assoc($result)) {
             icon: unuIcon
         }).addTo(map).bindPopup("<b>Kampus UNU</b><br>Titik Awal");
 
+        // BUAT 2 JENIS ICON: DEFAULT & ACTIVE
+        const markerIconDefault = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [20, 33], // Ukuran kecil
+            iconAnchor: [10, 33],
+            popupAnchor: [0, -30],
+            shadowSize: [33, 33]
+        });
+
+        const markerIconActive = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [30, 50], // Ukuran besar
+            iconAnchor: [15, 50],
+            popupAnchor: [0, -45],
+            shadowSize: [50, 50]
+        });
+
         let routingControl = null;
         let markers = [];
         let activeIndex = -1;
 
         // --- LOOP MARKER ---
         dataKost.forEach((k, index) => {
-            let marker = L.marker([k.latitude, k.longitude]).addTo(map);
+            let marker = L.marker([k.latitude, k.longitude], {
+                icon: markerIconDefault // Set icon default
+            }).addTo(map);
+
             marker.on('click', function() {
-                // Buka popup langsung saat pin diklik
-                marker.openPopup();
                 fokusKeKost(k.latitude, k.longitude, index);
             });
+
+            marker.on('mouseover', function() {
+                marker.openPopup();
+            });
+
+            marker.on('mouseout', function() {
+                if (activeIndex !== index) {
+                    marker.closePopup();
+                }
+            });
+
             marker.bindPopup(`
             <div class="text-center pt-2">
                 <h6 class="fw-bold mb-1">${k.nama_kost}</h6>
@@ -641,10 +655,20 @@ while ($row = mysqli_fetch_assoc($result)) {
             const mapEl = document.getElementById('map');
             const routeBox = document.getElementById('route-info');
 
-            // Reset Highlight
+            // Reset Highlight Card
             document.querySelectorAll('.card-kost').forEach(c => c.classList.remove('active'));
             const card = document.getElementById(`card-${index}`);
             if (card) card.classList.add('active');
+
+            // RESET SEMUA MARKER KE DEFAULT
+            markers.forEach((m, i) => {
+                if (m) m.setIcon(markerIconDefault);
+            });
+
+            // SET MARKER AKTIF JADI BESAR & BIRU
+            if (markers[index]) {
+                markers[index].setIcon(markerIconActive);
+            }
 
             if (isMobile) {
                 // Mobile Logic
@@ -698,7 +722,13 @@ while ($row = mysqli_fetch_assoc($result)) {
             map.flyTo([destLat, destLng], 15, {
                 duration: 1.0
             });
-            if (markers[index]) markers[index].openPopup();
+
+            // Buka popup marker setelah peta selesai animasi
+            setTimeout(() => {
+                if (markers[index]) {
+                    markers[index].openPopup();
+                }
+            }, 1100); // Sedikit lebih lama dari durasi flyTo
 
             if (routingControl) map.removeControl(routingControl);
             routingControl = L.Routing.control({
@@ -725,6 +755,13 @@ while ($row = mysqli_fetch_assoc($result)) {
                     let waktu = Math.round(summary.totalTime / 60);
                     routeBox.style.display = 'block';
                     document.getElementById('route-details').innerHTML = `Jarak: <b>${jarak} km</b> • Waktu: <b>${waktu} mnt</b>`;
+
+                    // Pastikan popup tetap terbuka setelah routing selesai
+                    setTimeout(() => {
+                        if (markers[index]) {
+                            markers[index].openPopup();
+                        }
+                    }, 200);
                 })
                 .addTo(map);
         }

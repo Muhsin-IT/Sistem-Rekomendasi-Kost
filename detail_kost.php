@@ -63,7 +63,10 @@ if ($total_review > 0) {
     $avg_akurasi = round($sum_akurasi / $total_review, 1);
 }
 // ===============================================================
-// Fungsi Jarak
+// Fungsi Jarak & Koordinat UNU
+$lat_unu = -7.787861880324053;
+$long_unu = 110.33049620439317;
+
 function hitungJarak($lat1, $lon1, $lat2, $lon2)
 {
     if (!$lat1 || !$lon1) return 0;
@@ -73,13 +76,13 @@ function hitungJarak($lat1, $lon1, $lat2, $lon2)
     $a = sin($dLat / 2) * sin($dLat / 2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) * sin($dLon / 2);
     return round($earth * (2 * atan2(sqrt($a), sqrt(1 - $a))), 2);
 }
-$jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
+$jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu);
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 
-<head>
+<head></head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/img/logo/persegi.webp">
@@ -89,6 +92,8 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -152,9 +157,26 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
         }
 
         #map-detail {
-            height: 250px;
+            height: 400px;
             width: 100%;
             border-radius: 12px;
+            position: relative;
+        }
+
+        .route-info-box {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 9999;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+
+        .leaflet-routing-container {
+            display: none !important;
         }
 
         .panorama-container {
@@ -390,10 +412,17 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
 
             <div class="col-lg-4">
                 <div class="card card-custom p-4 sticky-top" style="top:90px">
-                    <h6 class="fw-bold mb-2">Lokasi</h6>
+                    <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt-fill text-danger"></i> Lokasi & Rute</h6>
                     <?php if ($kost['latitude']): ?>
-                        <div id="map-detail" class="mb-3"></div>
-                        <h4 class="text-center fw-bold text-success"><?= $jarak ?> Km <span class="fs-6 text-muted fw-normal">ke UNU</span></h4>
+                        <div id="map-detail" class="mb-3 position-relative">
+                            <div id="route-info" class="route-info-box" style="display:none;">
+                                <h6 class="fw-bold mb-1"><i class="bi bi-cursor-fill text-primary"></i> Rute & Estimasi</h6>
+                                <div id="route-details" class="small text-dark"></div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mb-3 py-2">
+                            <small><i class="bi bi-info-circle"></i> Jarak dari kampus UNU: <strong><?= $jarak ?> km</strong></small>
+                        </div>
                     <?php endif; ?>
                     <hr>
                     <div class="d-flex align-items-center">
@@ -503,14 +532,89 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], -7.7472, 110.3554);
 
     <?php if ($kost['latitude']): ?>
         <script>
+            const latUNU = <?= $lat_unu ?>;
+            const longUNU = <?= $long_unu ?>;
+            const latKost = <?= $kost['latitude'] ?>;
+            const longKost = <?= $kost['longitude'] ?>;
+
+            // Setup Peta
             var map = L.map('map-detail', {
-                center: [<?= $kost['latitude'] ?>, <?= $kost['longitude'] ?>],
-                zoom: 15,
-                zoomControl: false,
-                dragging: false
+                zoomControl: false
+            }).setView([latKost, longKost], 14);
+
+            L.control.zoom({
+                position: 'topright'
+            }).addTo(map);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: 'RadenStay'
+            }).addTo(map);
+
+            // Marker UNU (Kampus)
+            const unuIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
+                iconSize: [40, 40],
+                popupAnchor: [0, -20]
             });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            L.marker([<?= $kost['latitude'] ?>, <?= $kost['longitude'] ?>]).addTo(map);
+            L.marker([latUNU, longUNU], {
+                icon: unuIcon
+            }).addTo(map).bindPopup("<b>Kampus UNU</b><br>Titik Awal");
+
+            // Marker Kost (Biru, Besar)
+            const kostIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                iconSize: [30, 50],
+                iconAnchor: [15, 50],
+                popupAnchor: [0, -45],
+                shadowSize: [50, 50]
+            });
+            L.marker([latKost, longKost], {
+                icon: kostIcon
+            }).addTo(map).bindPopup("<b><?= $kost['nama_kost'] ?></b>");
+
+            // Routing dari UNU ke Kost
+            const routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(latUNU, longUNU),
+                    L.latLng(latKost, longKost)
+                ],
+                routeWhileDragging: false,
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                lineOptions: {
+                    styles: [{
+                        color: '#0d6efd',
+                        opacity: 0.8,
+                        weight: 6
+                    }]
+                },
+                createMarker: function() {
+                    return null; // Tidak buat marker tambahan
+                },
+                show: false
+            }).on('routesfound', function(e) {
+                var summary = e.routes[0].summary;
+                let jarak = (summary.totalDistance / 1000).toFixed(1);
+                let waktu = Math.round(summary.totalTime / 60);
+
+                document.getElementById('route-info').style.display = 'block';
+                document.getElementById('route-details').innerHTML = `
+                    <div class="mb-1"><i class="bi bi-signpost-2"></i> Jarak: <b>${jarak} km</b></div>
+                    <div><i class="bi bi-clock"></i> Waktu: <b>${waktu} menit</b></div>
+                `;
+            }).addTo(map);
+
+            // Fit bounds agar semua marker & rute terlihat
+            setTimeout(() => {
+                map.fitBounds([
+                    [latUNU, longUNU],
+                    [latKost, longKost]
+                ], {
+                    padding: [50, 50]
+                });
+            }, 500);
         </script>
     <?php endif; ?>
 
