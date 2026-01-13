@@ -606,6 +606,8 @@ while ($row = mysqli_fetch_assoc($result)) {
         dataKost.forEach((k, index) => {
             let marker = L.marker([k.latitude, k.longitude]).addTo(map);
             marker.on('click', function() {
+                // Buka popup langsung saat pin diklik
+                marker.openPopup();
                 fokusKeKost(k.latitude, k.longitude, index);
             });
             marker.bindPopup(`
@@ -664,6 +666,13 @@ while ($row = mysqli_fetch_assoc($result)) {
                     targetContainer.appendChild(mapEl);
                     targetContainer.appendChild(routeBox);
                     targetContainer.classList.add('active');
+                    // Pastikan pengguna melihat peta yang baru dibuka di mobile
+                    setTimeout(() => {
+                        card.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }, 50);
                 }
             } else {
                 // Desktop Logic
