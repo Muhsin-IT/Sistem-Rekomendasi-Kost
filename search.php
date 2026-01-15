@@ -114,7 +114,7 @@ if (mysqli_num_rows($result) > 0) {
         'kriteria'   => $konfigurasi_kriteria // Rumus bobot
     ];
 
-    $payload = json_encode(['data_kost' => $payload_array]);
+    $payload = json_encode($payload_array);
 
 
     $ch = curl_init($api_url);
