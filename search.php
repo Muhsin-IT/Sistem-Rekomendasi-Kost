@@ -497,10 +497,16 @@ if (mysqli_num_rows($result) > 0) {
         const markerIconActive = L.icon({
             iconUrl: 'assets/img/logo/pinunu3.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-            iconSize: [30, 50],
-            iconAnchor: [15, 50],
-            popupAnchor: [0, -45],
-            shadowSize: [50, 50]
+            // iconSize: [30, 50],
+            // iconAnchor: [15, 50],
+            // popupAnchor: [0, -45],
+            // shadowSize: [50, 50]
+
+            iconSize: [50, 55],
+            iconAnchor: [25, 55], // Tengah bawah icon (setengah lebar, tinggi penuh)
+            popupAnchor: [0, -55], // Popup muncul di atas icon
+            shadowSize: [60, 60], // Ukuran shadow
+            shadowAnchor: [20, 60] // Posisi shadow
         });
 
         let routingControl = null;

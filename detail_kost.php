@@ -621,10 +621,16 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
             // Marker UNU (Kampus)
             const unuIcon = L.icon({
                 iconUrl: 'assets/img/logo/pinunu3.png',
-                iconSize: [45, 68],
-                popupAnchor: [0, -20],
-                shadowSize: [50, 64], // Ukuran shadow
-                shadowAnchor: [15, 64]
+                // iconSize: [45, 68],
+                // popupAnchor: [0, -20],
+                // shadowSize: [50, 64], // Ukuran shadow
+                // shadowAnchor: [15, 64]
+
+                iconSize: [50, 55],
+                iconAnchor: [25, 55], // Tengah bawah icon (setengah lebar, tinggi penuh)
+                popupAnchor: [0, -55], // Popup muncul di atas icon
+                shadowSize: [60, 60], // Ukuran shadow
+                shadowAnchor: [20, 60] // Posisi shadow
             });
             L.marker([latUNU, longUNU], {
                 icon: unuIcon
