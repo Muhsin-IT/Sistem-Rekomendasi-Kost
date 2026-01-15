@@ -98,9 +98,24 @@ if (mysqli_num_rows($result) > 0) {
     // 3. KIRIM KE PYTHON API
     // ==================================================================================
     // GANTI URL NGROK DISINI
-    $api_url = "https://GANTI-DENGAN-URL-NGROK-ANDA.ngrok-free.app/hitung_saw";
+    $api_url = "http://127.0.0.1:5001/hitung-saw";
 
-    $payload = json_encode(['data_kost' => $data_untuk_python]);
+    $konfigurasi_kriteria = [
+        "C1" => ["atribut" => "cost",    "bobot" => 0.25], // Harga
+        "C2" => ["atribut" => "cost",    "bobot" => 0.15], // Jarak
+        "C3" => ["atribut" => "benefit", "bobot" => 0.20], // Fasilitas
+        "C4" => ["atribut" => "benefit", "bobot" => 0.10], // Peraturan
+        "C5" => ["atribut" => "benefit", "bobot" => 0.10], // Akurasi
+        "C6" => ["atribut" => "benefit", "bobot" => 0.20]  // Rating
+    ];
+
+    $payload_array = [
+        'alternatif' => $data_untuk_python,  // Data kost (C1-C6)
+        'kriteria'   => $konfigurasi_kriteria // Rumus bobot
+    ];
+
+    $payload = json_encode(['data_kost' => $payload_array]);
+
 
     $ch = curl_init($api_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -108,18 +123,25 @@ if (mysqli_num_rows($result) > 0) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 
-    // Gunakan try-catch ala PHP manual (cek error curl)
+    // Timeout setelah 5 detik
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+
+
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
 
-    if (curl_errno($ch)) {
-        // Jika error koneksi ke Python, biarkan $is_ai_active tetap false
-        // echo 'Error Curl: ' . curl_error($ch); 
+
+    if ($curl_error) {
+        // Tampilkan error untuk debugging
+        // echo "<div class='alert alert-danger'>DEBUG: Python Mati/Error - $curl_error</div>";
     } else {
         if ($http_code == 200) {
             $json_res = json_decode($response, true);
+
+            // --- PERBAIKAN 3: BACA KUNCI 'data' (BUKAN 'hasil') ---
             if (isset($json_res['status']) && $json_res['status'] == 'success') {
-                $hasil_ranking = $json_res['hasil'];
+                $hasil_ranking = $json_res['data']; // Python app.py mengembalikan 'data'
                 $is_ai_active = true;
             }
         }
@@ -473,7 +495,7 @@ if (mysqli_num_rows($result) > 0) {
         });
 
         const markerIconActive = L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            iconUrl: 'assets/img/logo/pinunu3.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
             iconSize: [30, 50],
             iconAnchor: [15, 50],

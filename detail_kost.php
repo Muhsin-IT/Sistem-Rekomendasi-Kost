@@ -620,9 +620,11 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
 
             // Marker UNU (Kampus)
             const unuIcon = L.icon({
-                iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
-                iconSize: [40, 40],
-                popupAnchor: [0, -20]
+                iconUrl: 'assets/img/logo/pinunu3.png',
+                iconSize: [45, 68],
+                popupAnchor: [0, -20],
+                shadowSize: [50, 64], // Ukuran shadow
+                shadowAnchor: [15, 64]
             });
             L.marker([latUNU, longUNU], {
                 icon: unuIcon

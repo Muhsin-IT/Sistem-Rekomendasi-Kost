@@ -52,7 +52,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="style.css">
 
-    <style>
+    <!-- <style>
         /* HERO SECTION (Style Lama) */
         .hero-section {
             background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
@@ -573,9 +573,13 @@ while ($row = mysqli_fetch_assoc($result)) {
         }).addTo(map);
 
         const unuIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
-            iconSize: [40, 40],
-            popupAnchor: [0, -20]
+            iconUrl: 'assets/img/logo/pinunu3.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+            iconSize: [50, 55],
+            iconAnchor: [25, 55], // Tengah bawah icon (setengah lebar, tinggi penuh)
+            popupAnchor: [0, -55], // Popup muncul di atas icon
+            shadowSize: [60, 60], // Ukuran shadow
+            shadowAnchor: [20, 60] // Posisi shadow
         });
         L.marker([latUNU, longUNU], {
             icon: unuIcon
