@@ -104,12 +104,12 @@
                         // Konfigurasi Kriteria & Default Value
                         // Kita ambil dari URL jika ada, jika tidak pakai Default dari soal
                         $kriteria = [
-                            ['code' => 'w1', 'label' => 'Harga (C1)', 'type' => 'Cost', 'color' => 'danger', 'def' => 16.88],
-                            ['code' => 'w2', 'label' => 'Jarak (C2)', 'type' => 'Cost', 'color' => 'danger', 'def' => 15.58],
-                            ['code' => 'w3', 'label' => 'Fasilitas (C3)', 'type' => 'Benefit', 'color' => 'success', 'def' => 18.18],
-                            ['code' => 'w4', 'label' => 'Peraturan (C4)', 'type' => 'Benefit', 'color' => 'success', 'def' => 16.88],
-                            ['code' => 'w5', 'label' => 'Akurasi (C5)', 'type' => 'Benefit', 'color' => 'success', 'def' => 15.59],
-                            ['code' => 'w6', 'label' => 'Ulasan (C6)', 'type' => 'Benefit', 'color' => 'success', 'def' => 16.88],
+                            ['code' => 'w1', 'label' => 'Harga Murah', 'type' => 'Cost', 'color' => 'danger', 'def' => 16.88],
+                            ['code' => 'w2', 'label' => 'Dekat Kampus', 'type' => 'Cost', 'color' => 'danger', 'def' => 15.58],
+                            ['code' => 'w3', 'label' => 'Fasilitas Lengkap', 'type' => 'Benefit', 'color' => 'success', 'def' => 18.18],
+                            ['code' => 'w4', 'label' => 'Peraturan Ketat', 'type' => 'Benefit', 'color' => 'success', 'def' => 16.88],
+                            ['code' => 'w5', 'label' => 'Akurasi Foto', 'type' => 'Benefit', 'color' => 'success', 'def' => 15.59],
+                            ['code' => 'w6', 'label' => 'Ulasan Bagus', 'type' => 'Benefit', 'color' => 'success', 'def' => 16.88],
                         ];
                         ?>
 
