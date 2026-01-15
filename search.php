@@ -474,6 +474,7 @@ if (mysqli_num_rows($result) > 0) {
     </div>
 
     <?php include 'footer.php'; ?>
+    <?php include 'modal_filter_bobot.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
