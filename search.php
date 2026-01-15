@@ -2,9 +2,39 @@
 session_start();
 include 'koneksi.php';
 
-$keyword = isset($_GET['keyword']) ? mysqli_real_escape_string($conn, $_GET['keyword']) : '';
+$keyword = isset($_GET['keyword']) ? $_GET['keyword'] : '';
 
-// INISIALISASI VARIABEL AGAR TIDAK ERROR SAAT KOSONG
+// -----------------------------------------------------------
+// 1. KONFIGURASI BOBOT SAW (DARI FILTER ATAU DEFAULT)
+// -----------------------------------------------------------
+$default_weights = [
+    'w1' => 16.88, // Harga (Cost)
+    'w2' => 15.58, // Jarak (Cost)
+    'w3' => 18.18, // Fasilitas (Benefit)
+    'w4' => 16.88, // Peraturan (Benefit)
+    'w5' => 15.59, // Akurasi (Benefit)
+    'w6' => 16.88  // Ulasan (Benefit)
+];
+
+// Ambil dari URL jika ada, jika tidak pakai default
+$w1 = isset($_GET['w1']) ? floatval($_GET['w1']) : $default_weights['w1'];
+$w2 = isset($_GET['w2']) ? floatval($_GET['w2']) : $default_weights['w2'];
+$w3 = isset($_GET['w3']) ? floatval($_GET['w3']) : $default_weights['w3'];
+$w4 = isset($_GET['w4']) ? floatval($_GET['w4']) : $default_weights['w4'];
+$w5 = isset($_GET['w5']) ? floatval($_GET['w5']) : $default_weights['w5'];
+$w6 = isset($_GET['w6']) ? floatval($_GET['w6']) : $default_weights['w6'];
+
+// Format Data 'kriteria' untuk Python API
+$config_kriteria = [
+    'C1' => ['bobot' => $w1 / 100, 'atribut' => 'cost'],    // Harga
+    'C2' => ['bobot' => $w2 / 100, 'atribut' => 'cost'],    // Jarak
+    'C3' => ['bobot' => $w3 / 100, 'atribut' => 'benefit'], // Fasilitas
+    'C4' => ['bobot' => $w4 / 100, 'atribut' => 'benefit'], // Peraturan
+    'C5' => ['bobot' => $w5 / 100, 'atribut' => 'benefit'], // Akurasi
+    'C6' => ['bobot' => $w6 / 100, 'atribut' => 'benefit']  // Ulasan
+];
+
+// INISIALISASI VARIABEL (PENTING: JANGAN DI-COMMENT AGAR TIDAK ERROR)
 $data_untuk_python = [];
 $data_kost_lengkap = [];
 $hasil_ranking = [];
@@ -13,20 +43,12 @@ $is_ai_active = false;
 // ==================================================================================
 // 1. QUERY PENCARIAN CANGGIH (TERMASUK FASILITAS KAMAR)
 // ==================================================================================
-// Logika: Join Kost -> Kamar -> Fasilitas (Cek apakah fasilitas ada di Kost ATAU di Kamar)
-
 $query = "SELECT DISTINCT k.* FROM kost k
-          -- 1. Join Kamar (Agar bisa cek fasilitas di dalam kamar)
           LEFT JOIN kamar km ON k.id_kost = km.id_kost
-          
-          -- 2. Join Fasilitas (Cek Fasilitas Kost ATAU Fasilitas Kamar)
           LEFT JOIN rel_fasilitas rf ON (rf.id_kost = k.id_kost OR rf.id_kamar = km.id_kamar)
           LEFT JOIN master_fasilitas mf ON rf.id_master_fasilitas = mf.id_master_fasilitas
-          
-          -- 3. Join Peraturan (Cek Peraturan Kost ATAU Peraturan Kamar)
           LEFT JOIN rel_peraturan rp ON (rp.id_kost = k.id_kost OR rp.id_kamar = km.id_kamar)
           LEFT JOIN master_peraturan mp ON rp.id_master_peraturan = mp.id_master_peraturan
-          
           WHERE 
             k.nama_kost LIKE '%$keyword%' OR 
             k.alamat LIKE '%$keyword%' OR
@@ -53,7 +75,10 @@ function hitungJarak($lat1, $lon1, $lat2, $lon2)
     return round($dist * 60 * 1.1515 * 1.609344, 2);
 }
 
+// Cek apakah ada hasil dari database
 if (mysqli_num_rows($result) > 0) {
+
+    // LOOPING DATA DARI DATABASE
     while ($row = mysqli_fetch_assoc($result)) {
         $id = $row['id_kost'];
 
@@ -64,8 +89,7 @@ if (mysqli_num_rows($result) > 0) {
         // C2: Jarak
         $c2 = hitungJarak($row['latitude'], $row['longitude'], $lat_unu, $long_unu);
 
-        // C3: Fasilitas (Total di Kost + Total di Kamar)
-        // Kita hitung semua fasilitas unik yang terkait dengan kost ini
+        // C3: Fasilitas
         $q_fas = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT id_master_fasilitas) as jum FROM rel_fasilitas WHERE id_kost='$id' OR id_kamar IN (SELECT id_kamar FROM kamar WHERE id_kost='$id')"));
         $c3 = $q_fas['jum'];
 
@@ -78,6 +102,7 @@ if (mysqli_num_rows($result) > 0) {
         $c5 = $q_rev['avg_c5'] ?? 0;
         $c6 = $q_rev['avg_c6'] ?? 0;
 
+        // Masukkan ke Array untuk Python
         $data_untuk_python[] = [
             'id_kost' => $id,
             'C1' => $c1,
@@ -88,68 +113,55 @@ if (mysqli_num_rows($result) > 0) {
             'C6' => $c6
         ];
 
+        // Masukkan ke Array untuk Tampilan PHP
         $data_kost_lengkap[$id] = $row;
         $data_kost_lengkap[$id]['harga_tampil'] = $c1;
         $data_kost_lengkap[$id]['rating_tampil'] = $c6;
         $data_kost_lengkap[$id]['jarak_kampus'] = $c2;
     }
+    // ^^^ TUTUP LOOP WHILE DI SINI ^^^
 
     // ==================================================================================
-    // 3. KIRIM KE PYTHON API
+    // 3. KIRIM KE PYTHON API (HANYA JIKA ADA DATA)
     // ==================================================================================
-    // GANTI URL NGROK DISINI
-    $api_url = "http://127.0.0.1:5001/hitung-saw";
+    if (!empty($data_untuk_python)) {
 
-    $konfigurasi_kriteria = [
-        "C1" => ["atribut" => "cost",    "bobot" => 0.25], // Harga
-        "C2" => ["atribut" => "cost",    "bobot" => 0.15], // Jarak
-        "C3" => ["atribut" => "benefit", "bobot" => 0.20], // Fasilitas
-        "C4" => ["atribut" => "benefit", "bobot" => 0.10], // Peraturan
-        "C5" => ["atribut" => "benefit", "bobot" => 0.10], // Akurasi
-        "C6" => ["atribut" => "benefit", "bobot" => 0.20]  // Rating
-    ];
+        // URL Python Flask
+        $api_url = "http://127.0.0.1:5001/hitung-saw";
 
-    $payload_array = [
-        'alternatif' => $data_untuk_python,  // Data kost (C1-C6)
-        'kriteria'   => $konfigurasi_kriteria // Rumus bobot
-    ];
+        // PERBAIKAN: Gunakan variabel $data_untuk_python (bukan $data_kost yang undefined)
+        $payload = json_encode([
+            'alternatif' => $data_untuk_python,
+            'kriteria'   => $config_kriteria
+        ]);
 
-    $payload = json_encode($payload_array);
+        // Curl Request
+        $ch = curl_init($api_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Timeout 5 detik
 
+        // Eksekusi CURL
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
 
-    $ch = curl_init($api_url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-
-    // Timeout setelah 5 detik
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-
-
-    $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curl_error = curl_error($ch);
-
-
-    if ($curl_error) {
-        // Tampilkan error untuk debugging
-        // echo "<div class='alert alert-danger'>DEBUG: Python Mati/Error - $curl_error</div>";
-    } else {
-        if ($http_code == 200) {
+        if (!$curl_error && $http_code == 200) {
             $json_res = json_decode($response, true);
 
-            // --- PERBAIKAN 3: BACA KUNCI 'data' (BUKAN 'hasil') ---
+            // Cek status sukses dari Python
             if (isset($json_res['status']) && $json_res['status'] == 'success') {
-                $hasil_ranking = $json_res['data']; // Python app.py mengembalikan 'data'
+                $hasil_ranking = $json_res['data']; // Python mengembalikan key 'data'
                 $is_ai_active = true;
             }
         }
+        curl_close($ch);
     }
-    curl_close($ch);
 }
-?>
 
+?>
 <!DOCTYPE html>
 <html lang="id">
 
@@ -364,6 +376,7 @@ if (mysqli_num_rows($result) > 0) {
         <div class="split-container">
             <div class="list-area">
                 <div class="d-flex justify-content-between align-items-center mb-3">
+
                     <div>
                         <h6 class="fw-bold mb-1">
                             Hasil: "<strong><?= htmlspecialchars($keyword) ?></strong>"
@@ -374,6 +387,12 @@ if (mysqli_num_rows($result) > 0) {
                             <small class="badge bg-secondary">Python API Offline</small>
                         <?php endif; ?>
                     </div>
+
+                    <button type="button" class="btn btn-warning btn-sm text-white fw-bold shadow-sm rounded-pill px-3"
+                        data-bs-toggle="modal" data-bs-target="#modalFilterBobot">
+                        <i class="bi bi-sliders me-1"></i> Atur Bobot
+                    </button>
+
                 </div>
 
                 <?php if (empty($data_kost_lengkap)): ?>
@@ -476,9 +495,15 @@ if (mysqli_num_rows($result) > 0) {
         }).addTo(map);
 
         const unuIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/1673/1673188.png',
-            iconSize: [40, 40],
-            popupAnchor: [0, -20]
+            iconUrl: 'assets/img/logo/pinunu3.png',
+            // iconSize: [40, 40],
+            // popupAnchor: [0, -20]
+            iconSize: [50, 55],
+            iconAnchor: [25, 55], // Tengah bawah icon (setengah lebar, tinggi penuh)
+            popupAnchor: [0, -55], // Popup muncul di atas icon
+            shadowSize: [60, 60], // Ukuran shadow
+            shadowAnchor: [20, 60] // Posisi shadow
+
         });
         L.marker([latUNU, longUNU], {
             icon: unuIcon
@@ -495,18 +520,12 @@ if (mysqli_num_rows($result) > 0) {
         });
 
         const markerIconActive = L.icon({
-            iconUrl: 'assets/img/logo/pinunu3.png',
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-            // iconSize: [30, 50],
-            // iconAnchor: [15, 50],
-            // popupAnchor: [0, -45],
-            // shadowSize: [50, 50]
-
-            iconSize: [50, 55],
-            iconAnchor: [25, 55], // Tengah bawah icon (setengah lebar, tinggi penuh)
-            popupAnchor: [0, -55], // Popup muncul di atas icon
-            shadowSize: [60, 60], // Ukuran shadow
-            shadowAnchor: [20, 60] // Posisi shadow
+            iconSize: [30, 50],
+            iconAnchor: [15, 50],
+            popupAnchor: [0, -45],
+            shadowSize: [50, 50]
         });
 
         let routingControl = null;

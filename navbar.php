@@ -61,6 +61,11 @@ $isProfilPage = strpos($currentPage, 'profil') !== false;
         transition: color 0.3s ease;
     }
 
+    /* Z-index untuk navbar agar berada di atas resizer */
+    .main-navbar {
+        z-index: 10000 !important;
+    }
+
     @media (max-width: 991.98px) {
         body {
             padding-bottom: 80px;
