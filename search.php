@@ -241,7 +241,7 @@ if (mysqli_num_rows($result) > 0) {
             align-items: center;
             justify-content: center;
             position: relative;
-            z-index: 9999 !important;
+            z-index: 999 !important;
             height: 100%;
             align-self: stretch;
             flex-shrink: 0;
@@ -252,7 +252,15 @@ if (mysqli_num_rows($result) > 0) {
             background-color: #e2e6ea;
         }
 
-        /* DESKTOP VIEW */
+        /* PERBAIKAN: Pastikan modal di atas resizer */
+        .modal {
+            z-index: 10000 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 9999 !important;
+        }
+
         @media (min-width: 768px) {
             .split-container {
                 flex-direction: row;
@@ -411,6 +419,14 @@ if (mysqli_num_rows($result) > 0) {
                             $urutan_ids = array_keys($data_kost_lengkap);
                         }
 
+                        // PERBAIKAN: Siapkan data terurut untuk JavaScript
+                        $data_kost_terurut = [];
+                        foreach ($urutan_ids as $id) {
+                            if (isset($data_kost_lengkap[$id])) {
+                                $data_kost_terurut[] = $data_kost_lengkap[$id];
+                            }
+                        }
+
                         foreach ($urutan_ids as $index => $id):
                             if (!isset($data_kost_lengkap[$id])) continue;
                             $k = $data_kost_lengkap[$id];
@@ -480,7 +496,8 @@ if (mysqli_num_rows($result) > 0) {
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script>
-        const dataKost = <?= json_encode(array_values($data_kost_lengkap)) ?>;
+        // PERBAIKAN: Gunakan data yang sudah terurut sesuai ranking
+        const dataKost = <?= json_encode($data_kost_terurut) ?>;
         const latUNU = <?= $lat_unu ?>;
         const longUNU = <?= $long_unu ?>;
 
@@ -533,7 +550,7 @@ if (mysqli_num_rows($result) > 0) {
         let markers = [];
         let activeIndex = -1;
 
-        // LOOP MARKER
+        // LOOP MARKER - PERBAIKAN: Sekarang sudah sinkron dengan urutan card
         dataKost.forEach((k, index) => {
             if (!k.latitude || !k.longitude) return;
 

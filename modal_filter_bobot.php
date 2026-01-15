@@ -15,7 +15,91 @@
                         Total bobot akan otomatis seimbang (100%).
                     </p>
 
-                    <div class="vstack gap-3">
+                    <style>
+                        /* Styling Slider dengan Warna Gradient */
+                        .slider-bobot {
+                            -webkit-appearance: none;
+                            appearance: none;
+                            height: 8px;
+                            border-radius: 5px;
+                            outline: none;
+                            transition: background 0.1s;
+                        }
+
+                        /* Track bagian kiri (yang sudah digeser) */
+                        .slider-bobot::-webkit-slider-runnable-track {
+                            height: 8px;
+                            border-radius: 5px;
+                            background: transparent;
+                        }
+
+                        .slider-bobot::-moz-range-track {
+                            height: 8px;
+                            border-radius: 5px;
+                            background: transparent;
+                        }
+
+                        /* Thumb (lingkaran geser) */
+                        .slider-bobot::-webkit-slider-thumb {
+                            -webkit-appearance: none;
+                            appearance: none;
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            background: #0d6efd;
+                            cursor: pointer;
+                            border: 3px solid white;
+                            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+                            transition: all 0.2s;
+                            margin-top: -6px;
+                        }
+
+                        .slider-bobot::-moz-range-thumb {
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 50%;
+                            background: #0d6efd;
+                            cursor: pointer;
+                            border: 3px solid white;
+                            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+                            transition: all 0.2s;
+                        }
+
+                        /* Hover effect pada thumb */
+                        .slider-bobot::-webkit-slider-thumb:hover {
+                            background: #0b5ed7;
+                            transform: scale(1.1);
+                            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+                        }
+
+                        .slider-bobot::-moz-range-thumb:hover {
+                            background: #0b5ed7;
+                            transform: scale(1.1);
+                            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+                        }
+
+                        /* Active/Dragging effect */
+                        .slider-bobot:active::-webkit-slider-thumb {
+                            background: #0a58ca;
+                            transform: scale(1.15);
+                            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+                        }
+
+                        .slider-bobot:active::-moz-range-thumb {
+                            background: #0a58ca;
+                            transform: scale(1.15);
+                            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+                        }
+
+                        /* Progress bar (bagian kiri yang berwarna) untuk Firefox */
+                        .slider-bobot::-moz-range-progress {
+                            height: 8px;
+                            border-radius: 5px 0 0 5px;
+                            background: linear-gradient(90deg, #28a745 0%, #0d6efd 100%);
+                        }
+                    </style>
+
+                    <div class="vstack gap-2">
                         <?php
                         // Konfigurasi Kriteria & Default Value
                         // Kita ambil dari URL jika ada, jika tidak pakai Default dari soal
@@ -32,11 +116,11 @@
                         <?php foreach ($kriteria as $k):
                             $val = isset($_GET[$k['code']]) ? $_GET[$k['code']] : $k['def'];
                         ?>
-                            <div class="bg-white p-2 rounded shadow-sm border container-slider">
+                            <div class="bg-white px-3 py-2 rounded shadow-sm border container-slider">
                                 <div class="d-flex justify-content-between mb-1 align-items-center">
                                     <div>
                                         <span class="fw-bold small"><?= $k['label'] ?></span>
-                                        <span class="badge bg-<?= $k['color'] ?>-subtle text-<?= $k['color'] ?> border border-<?= $k['color'] ?>" style="font-size: 0.6rem;"><?= $k['type'] ?></span>
+                                        <span class="badge bg-<?= $k['color'] ?>-subtle text-<?= $k['color'] ?> border border-<?= $k['color'] ?> ms-1" style="font-size: 0.6rem;"><?= $k['type'] ?></span>
                                     </div>
                                     <span class="fw-bold text-primary small"><span id="txt_<?= $k['code'] ?>"><?= $val ?></span>%</span>
                                 </div>
@@ -47,7 +131,7 @@
                             </div>
                         <?php endforeach; ?>
 
-                        <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <div class="d-flex justify-content-between border-top pt-2 mt-1 px-2">
                             <span class="fw-bold text-muted small">Total Bobot:</span>
                             <span class="fw-bold text-success small" id="totalBobot">100.00%</span>
                         </div>
@@ -71,26 +155,33 @@
         const sliders = Array.from(document.querySelectorAll('.slider-bobot'));
         const totalDisplay = document.getElementById('totalBobot');
 
+        // Fungsi untuk update warna background slider
+        function updateSliderBackground(slider) {
+            const value = parseFloat(slider.value);
+            const percentage = value;
+            // Gradient dari hijau ke biru untuk bagian yang terisi, abu-abu untuk sisanya
+            slider.style.background = `linear-gradient(to right, #28a745 0%, #0d6efd ${percentage}%, #e9ecef ${percentage}%, #e9ecef 100%)`;
+        }
+
+        // Initialize semua slider background
         sliders.forEach(slider => {
-            // Event saat digeser
+            updateSliderBackground(slider);
+        });
+
+        sliders.forEach(slider => {
             slider.addEventListener('input', function(e) {
                 const currentId = e.target.id;
                 let currentVal = parseFloat(e.target.value);
 
-                // Update teks angka sendiri
                 document.getElementById('txt_' + currentId).innerText = currentVal.toFixed(2);
+                
+                // Update background slider yang sedang digeser
+                updateSliderBackground(e.target);
 
-                // === LOGIKA EQUALIZER ===
-                // 1. Hitung sisa kuota (100 - nilai slider yang sedang digeser)
                 let remainingQuota = 100 - currentVal;
-
-                // 2. Cari slider LAINNYA
                 let otherSliders = sliders.filter(s => s.id !== currentId);
-
-                // 3. Hitung total nilai slider LAINNYA saat ini
                 let currentSumOthers = otherSliders.reduce((sum, s) => sum + parseFloat(s.value), 0);
 
-                // 4. Distribusikan sisa kuota secara proporsional ke slider lain
                 otherSliders.forEach(s => {
                     let oldVal = parseFloat(s.value);
                     let proportion = 0;
@@ -98,18 +189,17 @@
                     if (currentSumOthers > 0) {
                         proportion = oldVal / currentSumOthers;
                     } else {
-                        // Jika semua slider lain 0, bagi rata
                         proportion = 1 / otherSliders.length;
                     }
 
                     let newVal = remainingQuota * proportion;
-
-                    // Update nilai slider lain
                     s.value = newVal;
                     document.getElementById('txt_' + s.id).innerText = newVal.toFixed(2);
+                    
+                    // Update background slider lainnya
+                    updateSliderBackground(s);
                 });
 
-                // Update Total Display (Harusnya selalu mendekati 100)
                 totalDisplay.innerText = "100.00%";
             });
         });
