@@ -37,6 +37,30 @@ $isProfilPage = strpos($currentPage, 'profil') !== false;
         color: #1500ffff;
     }
 
+    /* Styling untuk active link pada navbar atas */
+    .navbar-nav .nav-link.active {
+        color: #1500ffff !important;
+        font-weight: 700 !important;
+        position: relative;
+    }
+
+    .navbar-nav .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 30px;
+        height: 3px;
+        background-color: #1500ffff;
+        border-radius: 2px;
+    }
+
+    .navbar-nav .nav-link:hover {
+        color: #1500ffff !important;
+        transition: color 0.3s ease;
+    }
+
     @media (max-width: 991.98px) {
         body {
             padding-bottom: 80px;
@@ -66,9 +90,9 @@ $isProfilPage = strpos($currentPage, 'profil') !== false;
 
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-center text-center text-lg-start mt-3 mt-lg-0">
-                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark" href="index">Beranda</a></li>
-                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark" href="tentang">Tentang</a></li>
-                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark" href="riwayat_sewa">Pesanan</a></li>
+                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark <?= $currentPage === 'index.php' ? 'active' : '' ?>" href="index">Beranda</a></li>
+                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark <?= $currentPage === 'tentang.php' ? 'active' : '' ?>" href="tentang">Tentang</a></li>
+                <li class="nav-item"><a class="nav-link fw-semibold px-3 text-dark <?= $currentPage === 'riwayat_sewa.php' ? 'active' : '' ?>" href="riwayat_sewa">Pesanan</a></li>
 
                 <?php if (isset($_SESSION['login'])): ?>
                     <li class="nav-item dropdown ms-lg-3 mt-2 mt-lg-0">
