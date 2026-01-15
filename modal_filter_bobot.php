@@ -174,7 +174,7 @@
                 let currentVal = parseFloat(e.target.value);
 
                 document.getElementById('txt_' + currentId).innerText = currentVal.toFixed(2);
-                
+
                 // Update background slider yang sedang digeser
                 updateSliderBackground(e.target);
 
@@ -195,7 +195,7 @@
                     let newVal = remainingQuota * proportion;
                     s.value = newVal;
                     document.getElementById('txt_' + s.id).innerText = newVal.toFixed(2);
-                    
+
                     // Update background slider lainnya
                     updateSliderBackground(s);
                 });
