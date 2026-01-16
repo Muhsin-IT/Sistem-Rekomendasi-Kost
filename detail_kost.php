@@ -78,27 +78,34 @@ function hitungJarak($lat1, $lon1, $lat2, $lon2)
 }
 $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu);
 
-// ==========================================================
-// LOGIC FAIR PRICE CHECKER (AI)
-// ==========================================================
+    // ==========================================================
+    // LOGIC FAIR PRICE CHECKER 
+    // ==========================================================
 
-// 1. Ambil Data Kost Lain (Sebagai Data Pembanding/Pasar)
-// Kita butuh: Harga, Jarak, Jml Fasilitas, Jml Peraturan
-$query_market = "SELECT k.id_kost, k.latitude, k.longitude,
+    // 0. Ambil Harga Termurah Kost Ini (Karena belum ada di variabel $kost)
+    $q_min_price = mysqli_fetch_assoc(mysqli_query($conn, "SELECT MIN(harga_per_bulan) as min_p FROM kamar WHERE id_kost='$id_kost'"));
+    $harga_min_ini = $q_min_price['min_p'] ?? 0;
+
+    // 1. Ambil Data Kost Lain (Sebagai Data Pembanding/Pasar)
+    $query_market = "SELECT k.id_kost, k.latitude, k.longitude,
                 (SELECT MIN(harga_per_bulan) FROM kamar WHERE id_kost = k.id_kost) as harga,
                 (SELECT COUNT(id_rel_fasilitas) FROM rel_fasilitas WHERE id_kost = k.id_kost) as jum_fas,
                 (SELECT COUNT(id_rel_peraturan) FROM rel_peraturan WHERE id_kost = k.id_kost) as jum_per
                 FROM kost k 
                 WHERE k.id_kost != '$id_kost' 
-                AND k.latitude != 0"; // Jangan ambil kost yg sedang dilihat
+                AND k.latitude != 0";
 
-$res_market = mysqli_query($conn, $query_market);
+    $res_market = mysqli_query($conn, $query_market);
 $market_data = [];
 
-// Loop data pasar
-while($m = mysqli_fetch_assoc($res_market)) {
-    if($m['harga'] > 0) { // Hanya ambil yg ada harganya
-        $jarak = hitungJarak($m['latitude'], $m['longitude'], $lat_unu, $long_unu); // Pakai fungsi jarak yg sudah ada
+    // Koordinat UNU (Pastikan variabel ini terbaca, jika error definisikan ulang di sini)
+    $lat_unu_ai = -7.787861880324053;
+    $long_unu_ai = 110.33049620439317;
+
+    while ($m = mysqli_fetch_assoc($res_market)) {
+    if ($m['harga'] > 0) {
+        // Gunakan fungsi hitungJarak yang sudah ada di file Anda
+        $jarak = hitungJarak($m['latitude'], $m['longitude'], $lat_unu_ai, $long_unu_ai);
         $market_data[] = [
             'price' => (int)$m['harga'],
             'distance' => (float)$jarak,
@@ -108,14 +115,14 @@ while($m = mysqli_fetch_assoc($res_market)) {
     }
 }
 
-// 2. Siapkan Data Target (Kost ini)
-// Hitung data kost ini
-$jarak_target = hitungJarak($data_kost['latitude'], $data_kost['longitude'], $lat_unu, $long_unu);
+    // 2. Siapkan Data Target (Kost ini)
+    // PERBAIKAN DISINI: Ganti $data_kost menjadi $kost
+    $jarak_target = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu_ai, $long_unu_ai);
 $q_fas_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_fasilitas WHERE id_kost='$id_kost'"));
 $q_per_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_peraturan WHERE id_kost='$id_kost'"));
 
 $target_data = [
-    'price' => (int)$data_kost['harga_min'], // Pastikan variabel harga min kost ini ada
+    'price' => (int)$harga_min_ini, // Gunakan harga yang baru diambil
     'distance' => (float)$jarak_target,
     'total_fasilitas' => (int)$q_fas_target['c'],
     'total_peraturan' => (int)$q_per_target['c']
@@ -123,7 +130,7 @@ $target_data = [
 
 // 3. Kirim ke Python API
 $ai_prediction = null;
-if(count($market_data) > 5) { // Minimal ada 5 kost lain biar akurat
+if (count($market_data) > 3) { // Minimal ada 3 data pasar
     $url_api = "http://127.0.0.1:5001/predict-price";
     $payload = json_encode(['target' => $target_data, 'market' => $market_data]);
     
@@ -132,8 +139,8 @@ if(count($market_data) > 5) { // Minimal ada 5 kost lain biar akurat
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Timeout cepat aja
-    
+    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+
     $resp = curl_exec($ch);
     $ai_prediction = json_decode($resp, true);
     curl_close($ch);
