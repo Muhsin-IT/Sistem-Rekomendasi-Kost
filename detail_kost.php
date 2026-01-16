@@ -77,6 +77,67 @@ function hitungJarak($lat1, $lon1, $lat2, $lon2)
     return round($earth * (2 * atan2(sqrt($a), sqrt(1 - $a))), 2);
 }
 $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu);
+
+// ==========================================================
+// LOGIC FAIR PRICE CHECKER (AI)
+// ==========================================================
+
+// 1. Ambil Data Kost Lain (Sebagai Data Pembanding/Pasar)
+// Kita butuh: Harga, Jarak, Jml Fasilitas, Jml Peraturan
+$query_market = "SELECT k.id_kost, k.latitude, k.longitude,
+                (SELECT MIN(harga_per_bulan) FROM kamar WHERE id_kost = k.id_kost) as harga,
+                (SELECT COUNT(id_rel_fasilitas) FROM rel_fasilitas WHERE id_kost = k.id_kost) as jum_fas,
+                (SELECT COUNT(id_rel_peraturan) FROM rel_peraturan WHERE id_kost = k.id_kost) as jum_per
+                FROM kost k 
+                WHERE k.id_kost != '$id_kost' 
+                AND k.latitude != 0"; // Jangan ambil kost yg sedang dilihat
+
+$res_market = mysqli_query($conn, $query_market);
+$market_data = [];
+
+// Loop data pasar
+while($m = mysqli_fetch_assoc($res_market)) {
+    if($m['harga'] > 0) { // Hanya ambil yg ada harganya
+        $jarak = hitungJarak($m['latitude'], $m['longitude'], $lat_unu, $long_unu); // Pakai fungsi jarak yg sudah ada
+        $market_data[] = [
+            'price' => (int)$m['harga'],
+            'distance' => (float)$jarak,
+            'total_fasilitas' => (int)$m['jum_fas'],
+            'total_peraturan' => (int)$m['jum_per']
+        ];
+    }
+}
+
+// 2. Siapkan Data Target (Kost ini)
+// Hitung data kost ini
+$jarak_target = hitungJarak($data_kost['latitude'], $data_kost['longitude'], $lat_unu, $long_unu);
+$q_fas_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_fasilitas WHERE id_kost='$id_kost'"));
+$q_per_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_peraturan WHERE id_kost='$id_kost'"));
+
+$target_data = [
+    'price' => (int)$data_kost['harga_min'], // Pastikan variabel harga min kost ini ada
+    'distance' => (float)$jarak_target,
+    'total_fasilitas' => (int)$q_fas_target['c'],
+    'total_peraturan' => (int)$q_per_target['c']
+];
+
+// 3. Kirim ke Python API
+$ai_prediction = null;
+if(count($market_data) > 5) { // Minimal ada 5 kost lain biar akurat
+    $url_api = "http://127.0.0.1:5001/predict-price";
+    $payload = json_encode(['target' => $target_data, 'market' => $market_data]);
+    
+    $ch = curl_init($url_api);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Timeout cepat aja
+    
+    $resp = curl_exec($ch);
+    $ai_prediction = json_decode($resp, true);
+    curl_close($ch);
+}
 ?>
 
 <!DOCTYPE html>
@@ -400,6 +461,30 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                                 <h5 class="fw-bold text-primary">Rp <?= number_format($kmr['harga_per_bulan'], 0, ',', '.') ?></h5>
                                 <small class="text-muted">/ bulan</small>
                             </div>
+                            <?php if(isset($ai_prediction['status']) && $ai_prediction['status'] == 'success'): ?>
+                            <div class="alert alert-light border shadow-sm mt-3 d-flex align-items-center gap-3">
+                                <div class="fs-1 text-<?= $ai_prediction['color'] ?>">
+                                    <?php if($ai_prediction['color'] == 'danger'): ?>
+                                        <i class="bi bi-graph-up-arrow"></i>
+                                    <?php elseif($ai_prediction['color'] == 'primary'): ?>
+                                        <i class="bi bi-tags-fill"></i>
+                                    <?php else: ?>
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-<?= $ai_prediction['color'] ?>">
+                                        <?= $ai_prediction['label'] ?>
+                                    </h6>
+                                    <small class="text-muted" style="font-size: 0.8rem;">
+                                        Menurut AI, harga wajar untuk fasilitas & lokasi ini adalah 
+                                        <strong>Rp <?= number_format($ai_prediction['predicted_price'], 0,',','.') ?></strong>.
+                                        <br>
+                                        (Selisih: <?= $ai_prediction['diff_percent'] ?>%)
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
