@@ -78,16 +78,16 @@ function hitungJarak($lat1, $lon1, $lat2, $lon2)
 }
 $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu);
 
-    // ==========================================================
-    // LOGIC FAIR PRICE CHECKER 
-    // ==========================================================
+// ==========================================================
+// LOGIC FAIR PRICE CHECKER 
+// ==========================================================
 
-    // 0. Ambil Harga Termurah Kost Ini (Karena belum ada di variabel $kost)
-    $q_min_price = mysqli_fetch_assoc(mysqli_query($conn, "SELECT MIN(harga_per_bulan) as min_p FROM kamar WHERE id_kost='$id_kost'"));
-    $harga_min_ini = $q_min_price['min_p'] ?? 0;
+// 0. Ambil Harga Termurah Kost Ini (Karena belum ada di variabel $kost)
+$q_min_price = mysqli_fetch_assoc(mysqli_query($conn, "SELECT MIN(harga_per_bulan) as min_p FROM kamar WHERE id_kost='$id_kost'"));
+$harga_min_ini = $q_min_price['min_p'] ?? 0;
 
-    // 1. Ambil Data Kost Lain (Sebagai Data Pembanding/Pasar)
-    $query_market = "SELECT k.id_kost, k.latitude, k.longitude,
+// 1. Ambil Data Kost Lain (Sebagai Data Pembanding/Pasar)
+$query_market = "SELECT k.id_kost, k.latitude, k.longitude,
                 (SELECT MIN(harga_per_bulan) FROM kamar WHERE id_kost = k.id_kost) as harga,
                 (SELECT COUNT(id_rel_fasilitas) FROM rel_fasilitas WHERE id_kost = k.id_kost) as jum_fas,
                 (SELECT COUNT(id_rel_peraturan) FROM rel_peraturan WHERE id_kost = k.id_kost) as jum_per
@@ -95,14 +95,14 @@ $jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu)
                 WHERE k.id_kost != '$id_kost' 
                 AND k.latitude != 0";
 
-    $res_market = mysqli_query($conn, $query_market);
+$res_market = mysqli_query($conn, $query_market);
 $market_data = [];
 
-    // Koordinat UNU (Pastikan variabel ini terbaca, jika error definisikan ulang di sini)
-    $lat_unu_ai = -7.787861880324053;
-    $long_unu_ai = 110.33049620439317;
+// Koordinat UNU (Pastikan variabel ini terbaca, jika error definisikan ulang di sini)
+$lat_unu_ai = -7.787861880324053;
+$long_unu_ai = 110.33049620439317;
 
-    while ($m = mysqli_fetch_assoc($res_market)) {
+while ($m = mysqli_fetch_assoc($res_market)) {
     if ($m['harga'] > 0) {
         // Gunakan fungsi hitungJarak yang sudah ada di file Anda
         $jarak = hitungJarak($m['latitude'], $m['longitude'], $lat_unu_ai, $long_unu_ai);
@@ -115,9 +115,9 @@ $market_data = [];
     }
 }
 
-    // 2. Siapkan Data Target (Kost ini)
-    // PERBAIKAN DISINI: Ganti $data_kost menjadi $kost
-    $jarak_target = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu_ai, $long_unu_ai);
+// 2. Siapkan Data Target (Kost ini)
+// PERBAIKAN DISINI: Ganti $data_kost menjadi $kost
+$jarak_target = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu_ai, $long_unu_ai);
 $q_fas_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_fasilitas WHERE id_kost='$id_kost'"));
 $q_per_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_peraturan WHERE id_kost='$id_kost'"));
 
@@ -133,7 +133,7 @@ $ai_prediction = null;
 if (count($market_data) > 3) { // Minimal ada 3 data pasar
     $url_api = "http://127.0.0.1:5001/predict-price";
     $payload = json_encode(['target' => $target_data, 'market' => $market_data]);
-    
+
     $ch = curl_init($url_api);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
@@ -144,6 +144,36 @@ if (count($market_data) > 3) { // Minimal ada 3 data pasar
     $resp = curl_exec($ch);
     $ai_prediction = json_decode($resp, true);
     curl_close($ch);
+}
+
+// ==========================================================
+// LOGIC SMART REVIEW SUMMARY (AI)
+// ==========================================================
+
+// 1. Ambil Semua Teks Ulasan untuk Kost Ini
+$query_komentar = mysqli_query($conn, "SELECT komentar FROM review WHERE id_kost='$id_kost' AND komentar != ''");
+$all_reviews = [];
+while ($row_ul = mysqli_fetch_assoc($query_komentar)) {
+    $all_reviews[] = $row_ul['komentar'];
+}
+
+$ai_review_summary = null;
+
+// 2. Kirim ke Python (Hanya jika ada ulasan)
+if (count($all_reviews) > 0) {
+    $url_api_rev = "http://127.0.0.1:5001/analyze-reviews";
+    $payload_rev = json_encode(['reviews' => $all_reviews]);
+
+    $ch_rev = curl_init($url_api_rev);
+    curl_setopt($ch_rev, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch_rev, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch_rev, CURLOPT_POST, true);
+    curl_setopt($ch_rev, CURLOPT_POSTFIELDS, $payload_rev);
+    curl_setopt($ch_rev, CURLOPT_TIMEOUT, 3);
+
+    $resp_rev = curl_exec($ch_rev);
+    $ai_review_summary = json_decode($resp_rev, true);
+    curl_close($ch_rev);
 }
 ?>
 
@@ -468,35 +498,92 @@ if (count($market_data) > 3) { // Minimal ada 3 data pasar
                                 <h5 class="fw-bold text-primary">Rp <?= number_format($kmr['harga_per_bulan'], 0, ',', '.') ?></h5>
                                 <small class="text-muted">/ bulan</small>
                             </div>
-                            <?php if(isset($ai_prediction['status']) && $ai_prediction['status'] == 'success'): ?>
-                            <div class="alert alert-light border shadow-sm mt-3 d-flex align-items-center gap-3">
-                                <div class="fs-1 text-<?= $ai_prediction['color'] ?>">
-                                    <?php if($ai_prediction['color'] == 'danger'): ?>
-                                        <i class="bi bi-graph-up-arrow"></i>
-                                    <?php elseif($ai_prediction['color'] == 'primary'): ?>
-                                        <i class="bi bi-tags-fill"></i>
-                                    <?php else: ?>
-                                        <i class="bi bi-check-circle-fill"></i>
-                                    <?php endif; ?>
+                            <?php if (isset($ai_prediction['status']) && $ai_prediction['status'] == 'success'): ?>
+                                <div class="alert alert-light border shadow-sm mt-3 d-flex align-items-center gap-3">
+                                    <div class="fs-1 text-<?= $ai_prediction['color'] ?>">
+                                        <?php if ($ai_prediction['color'] == 'danger'): ?>
+                                            <i class="bi bi-graph-up-arrow"></i>
+                                        <?php elseif ($ai_prediction['color'] == 'primary'): ?>
+                                            <i class="bi bi-tags-fill"></i>
+                                        <?php else: ?>
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-<?= $ai_prediction['color'] ?>">
+                                            <?= $ai_prediction['label'] ?>
+                                        </h6>
+                                        <small class="text-muted" style="font-size: 0.8rem;">
+                                            Menurut AI, harga wajar untuk fasilitas & lokasi ini adalah
+                                            <strong>Rp <?= number_format($ai_prediction['predicted_price'], 0, ',', '.') ?></strong>.
+                                            <br>
+                                            (Selisih: <?= $ai_prediction['diff_percent'] ?>%)
+                                        </small>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h6 class="fw-bold mb-0 text-<?= $ai_prediction['color'] ?>">
-                                        <?= $ai_prediction['label'] ?>
-                                    </h6>
-                                    <small class="text-muted" style="font-size: 0.8rem;">
-                                        Menurut AI, harga wajar untuk fasilitas & lokasi ini adalah 
-                                        <strong>Rp <?= number_format($ai_prediction['predicted_price'], 0,',','.') ?></strong>.
-                                        <br>
-                                        (Selisih: <?= $ai_prediction['diff_percent'] ?>%)
-                                    </small>
-                                </div>
-                            </div>
-                        <?php endif; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
                 <div class="mt-5 mb-5">
                     <h4 class="fw-bold mb-4">Ulasan & Rating Akurasi</h4>
+
+                    <?php if (isset($ai_review_summary['status']) && $ai_review_summary['status'] == 'success'): ?>
+                        <div class="card border-0 shadow-sm bg-light mb-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0">
+                                        <i class="bi bi-robot text-primary"></i> Ringkasan Ulasan AI
+                                    </h6>
+                                    <span class="badge bg-<?= $ai_review_summary['sentiment_color'] ?>">
+                                        <?= $ai_review_summary['sentiment_label'] ?>
+                                    </span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="p-3 bg-white rounded border h-100">
+                                            <small class="text-success fw-bold d-block mb-2">
+                                                <i class="bi bi-hand-thumbs-up-fill"></i> Paling Disukai
+                                            </small>
+                                            <?php if (!empty($ai_review_summary['pros'])): ?>
+                                                <ul class="mb-0 ps-3 small text-secondary">
+                                                    <?php foreach ($ai_review_summary['pros'] as $pro): ?>
+                                                        <li><?= $pro ?></li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            <?php else: ?>
+                                                <small class="text-muted fst-italic">- Belum ada data spesifik -</small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-2">
+                                        <div class="p-3 bg-white rounded border h-100">
+                                            <small class="text-danger fw-bold d-block mb-2">
+                                                <i class="bi bi-hand-thumbs-down-fill"></i> Sering Dikeluhkan
+                                            </small>
+                                            <?php if (!empty($ai_review_summary['cons'])): ?>
+                                                <ul class="mb-0 ps-3 small text-secondary">
+                                                    <?php foreach ($ai_review_summary['cons'] as $con): ?>
+                                                        <li><?= $con ?></li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            <?php else: ?>
+                                                <small class="text-muted fst-italic">- Tidak ada keluhan signifikan -</small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-2 text-end">
+                                    <small class="text-muted" style="font-size: 0.7rem;">
+                                        Dianalisis dari <b><?= $ai_review_summary['total_reviews'] ?> ulasan</b> penghuni.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ($total_review > 0): ?>
                         <div class="row mb-4">
