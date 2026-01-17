@@ -27,6 +27,12 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
     mysqli_query($conn, "DELETE FROM survei WHERE id_survei='$id_survei' AND id_user='$id_user' AND status='Menunggu'");
     echo "<script>alert('Survei dibatalkan.'); window.location='riwayat_sewa';</script>";
 }
+
+// --- LOGIKA EDIT ULASAN ---
+if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])) {
+    $id_review = $_GET['id'];
+    $review_data = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM review WHERE id_review='$id_review' AND id_user='$id_user'"));
+}
 ?>
 
 <!DOCTYPE html>
@@ -70,8 +76,7 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                         </thead>
                         <tbody>
                             <?php
-                            // JOIN ke tabel Review untuk cek apakah sudah pernah review (r.id_review)
-                            $q_survei = mysqli_query($conn, "SELECT s.*, k.nama_kost, k.alamat, k.latitude, k.longitude, u.no_hp, r.id_review
+                            $q_survei = mysqli_query($conn, "SELECT s.*, k.nama_kost, k.alamat, k.latitude, k.longitude, u.no_hp, r.id_review, r.rating, r.skor_akurasi
                                                          FROM survei s 
                                                          JOIN kost k ON s.id_kost = k.id_kost 
                                                          JOIN users u ON k.id_pemilik = u.id_user
@@ -98,7 +103,10 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                                                 <a href="https://wa.me/<?= $s['no_hp'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i></a>
 
                                                 <?php if ($s['id_review']): ?>
-                                                    <button class="btn btn-sm btn-secondary rounded-pill" disabled><i class="bi bi-check-circle"></i> Sudah Dinilai</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill"
+                                                        onclick="editReview('<?= $s['id_review'] ?>', '<?= $s['id_kost'] ?>', '<?= addslashes($s['nama_kost']) ?>', <?= $s['latitude'] ?>, <?= $s['longitude'] ?>, 'survei', <?= $s['skor_akurasi'] ?>, <?= $s['rating'] ?>)">
+                                                        <i class="bi bi-pencil"></i> Edit Ulasan
+                                                    </button>
                                                 <?php else: ?>
                                                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
                                                         onclick="bukaModalReview('<?= $s['id_kost'] ?>', '<?= addslashes($s['nama_kost']) ?>', <?= $s['latitude'] ?>, <?= $s['longitude'] ?>, 'survei')">
@@ -137,8 +145,7 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                         </thead>
                         <tbody>
                             <?php
-                            // JOIN ke Review juga
-                            $q_sewa = mysqli_query($conn, "SELECT p.*, k.nama_kost, k.latitude, k.longitude, u.no_hp, r.id_review
+                            $q_sewa = mysqli_query($conn, "SELECT p.*, k.nama_kost, k.latitude, k.longitude, u.no_hp, r.id_review, r.rating, r.skor_akurasi
                                   FROM pengajuan_sewa p
                                   JOIN kost k ON p.id_kost = k.id_kost
                                   JOIN users u ON k.id_pemilik = u.id_user
@@ -157,7 +164,10 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                                                 <a href="https://wa.me/<?= $r['no_hp'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i></a>
 
                                                 <?php if ($r['id_review']): ?>
-                                                    <button class="btn btn-sm btn-secondary rounded-pill" disabled><i class="bi bi-check-circle"></i> Sudah Dinilai</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill"
+                                                        onclick="editReview('<?= $r['id_review'] ?>', '<?= $r['id_kost'] ?>', '<?= addslashes($r['nama_kost']) ?>', <?= $r['latitude'] ?>, <?= $r['longitude'] ?>, 'sewa', <?= $r['skor_akurasi'] ?>, <?= $r['rating'] ?>)">
+                                                        <i class="bi bi-pencil"></i> Edit Ulasan
+                                                    </button>
                                                 <?php else: ?>
                                                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
                                                         onclick="bukaModalReview('<?= $r['id_kost'] ?>', '<?= addslashes($r['nama_kost']) ?>', <?= $r['latitude'] ?>, <?= $r['longitude'] ?>, 'sewa')">
@@ -189,9 +199,11 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                 </div>
                 <form method="POST" action="proses_ulasan">
                     <div class="modal-body">
+                        <input type="hidden" name="id_review" id="idReviewEdit" value="">
                         <input type="hidden" name="id_kost" id="idKostReview">
                         <input type="hidden" name="user_lat" id="userLat">
                         <input type="hidden" name="user_long" id="userLong">
+                        <input type="hidden" name="jenis_reviewer" id="jenisReviewer">
 
                         <div id="gpsContainer" class="alert alert-secondary small py-2 mb-3">
                             <div class="d-flex align-items-center">
@@ -222,7 +234,7 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
                         </div>
 
                         <div class="mb-3">
-                            <textarea name="komentar" class="form-control" rows="2" placeholder="Tulis pengalamanmu..."></textarea>
+                            <textarea name="komentar" id="komentarReview" class="form-control" rows="2" placeholder="Tulis pengalamanmu..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -239,31 +251,69 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Variabel Global untuk menyimpan data Kost saat modal dibuka
         let targetLat = 0;
         let targetLong = 0;
-        let userType = ''; // 'sewa' atau 'survei'
+        let userType = '';
+        let isEditMode = false;
 
         function bukaModalReview(id, nama, lat, long, type) {
+            isEditMode = false;
+            document.getElementById('idReviewEdit').value = '';
             document.getElementById('idKostReview').value = id;
             document.getElementById('namaKostReview').innerText = nama;
+            document.getElementById('jenisReviewer').value = type;
+            document.getElementById('komentarReview').value = '';
+
+            // Reset rating buttons
+            document.querySelectorAll('input[name="rating_akurasi"]').forEach(el => el.checked = false);
+            document.querySelectorAll('input[name="rating_umum"]').forEach(el => el.checked = false);
 
             targetLat = lat;
             targetLong = long;
             userType = type;
 
-            // Reset UI
+            resetGPSUI();
+            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
+            myModal.show();
+            getLocation();
+        }
+
+        function editReview(idReview, idKost, nama, lat, long, type, akurasi, rating) {
+            isEditMode = true;
+            document.getElementById('idReviewEdit').value = idReview;
+            document.getElementById('idKostReview').value = idKost;
+            document.getElementById('namaKostReview').innerText = nama + ' (Edit)';
+            document.getElementById('jenisReviewer').value = type;
+
+            // Set rating yang sudah ada
+            document.getElementById('ak' + akurasi).checked = true;
+            document.getElementById('um' + rating).checked = true;
+
+            // Ambil komentar existing via AJAX
+            fetch('get_review.php?id=' + idReview)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('komentarReview').value = data.komentar;
+                    }
+                });
+
+            targetLat = lat;
+            targetLong = long;
+            userType = type;
+
+            resetGPSUI();
+            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
+            myModal.show();
+            getLocation();
+        }
+
+        function resetGPSUI() {
             document.getElementById('gpsContainer').className = 'alert alert-secondary small py-2 mb-3';
             document.getElementById('gpsText').innerHTML = 'Mendeteksi lokasi...';
             document.getElementById('jarakText').innerHTML = '';
             document.getElementById('loadingGps').style.display = 'inline-block';
             disableButton('Menunggu Lokasi...');
-
-            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
-            myModal.show();
-
-            // Mulai Cari Lokasi
-            getLocation();
         }
 
         function getLocation() {
@@ -278,34 +328,26 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
             }
         }
 
-        // Fungsi Utama Proses Lokasi
         function processPosition(position) {
             let uLat = position.coords.latitude;
             let uLong = position.coords.longitude;
 
-            // Set ke Input Hidden
             document.getElementById('userLat').value = uLat;
             document.getElementById('userLong').value = uLong;
 
-            // 1. Hitung Jarak (Haversine Formula)
             let jarakMeter = hitungJarak(uLat, uLong, targetLat, targetLong);
 
-            // 2. Ambil Alamat (Reverse Geocoding Nominatim)
-            // URL API OpenStreetMap
             let url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${uLat}&lon=${uLong}&zoom=18&addressdetails=1`;
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     let alamatBersih = data.display_name || "Alamat tidak ditemukan";
-                    // Persingkat alamat biar rapi
                     let alamatShort = alamatBersih.split(',').slice(0, 3).join(',');
 
-                    // Tampilkan di UI
                     document.getElementById('gpsText').innerHTML = `<i class='bi bi-geo-alt-fill'></i> ${alamatShort}`;
                     document.getElementById('loadingGps').style.display = 'none';
 
-                    // 3. Validasi Jarak
                     validasiJarak(jarakMeter);
                 })
                 .catch(err => {
@@ -321,12 +363,10 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
             let jarakText = document.getElementById('jarakText');
 
             if (userType === 'sewa') {
-                // Jika Anak Kost (Sewa), Bebas review
                 statusBox.className = 'alert alert-success small py-2 mb-3';
                 jarakText.innerHTML = `Status: Penyewa (Bebas Review dari mana saja)`;
                 enableButton();
             } else {
-                // Jika Survei, Wajib < 50m
                 if (meter <= 30) {
                     statusBox.className = 'alert alert-success small py-2 mb-3';
                     jarakText.innerHTML = `Jarak: ${meter} meter (Dalam jangkauan)`;
@@ -339,7 +379,6 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
             }
         }
 
-        // Rumus Jarak (Haversine) - Javascript Version
         function hitungJarak(lat1, lon1, lat2, lon2) {
             if ((lat1 == lat2) && (lon1 == lon2)) return 0;
             var radlat1 = Math.PI * lat1 / 180;
@@ -351,14 +390,14 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'batal_survei' && isset($_GET['id']
             dist = Math.acos(dist);
             dist = dist * 180 / Math.PI;
             dist = dist * 60 * 1.1515;
-            dist = dist * 1.609344 * 1000; // Meter
+            dist = dist * 1.609344 * 1000;
             return Math.round(dist);
         }
 
         function enableButton() {
             let btn = document.getElementById('btnKirimReview');
             btn.disabled = false;
-            btn.innerHTML = 'Kirim Ulasan';
+            btn.innerHTML = isEditMode ? '<i class="bi bi-check-circle"></i> Update Ulasan' : '<i class="bi bi-send"></i> Kirim Ulasan';
             btn.className = 'btn btn-primary w-100';
         }
 
