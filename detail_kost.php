@@ -1018,131 +1018,148 @@ if (count($all_reviews) > 0) {
                 console.log(`✅ ${nearbyMarkers.length} marker ditambahkan ke peta`);
             }
 
-            // ============================================
-            // FUNGSI PENCARIAN TEMPAT TERDEKAT (DIPERBAIKI)
-            // ============================================
-
-            let retryCount = 0;
-            const MAX_RETRIES = 2;
-
             async function cariTempatTerdekat() {
-                const radius = 1000;
+                const radius = 1000; // 1 km dalam meter
 
-                // QUERY YANG DISEDERHANAKAN - Hanya kategori penting
+                // QUERY YANG DIPERBAIKI & DISEDERHANAKAN
                 const query = `
-[out:json][timeout:30];
+[out:json][timeout:25];
 (
-  node["amenity"~"hospital|clinic|pharmacy"](around:${radius},${latKost},${longKost});
-  node["shop"~"convenience|supermarket"](around:${radius},${latKost},${longKost});
+  node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
+  way["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
+  
+  node["shop"="convenience"](around:${radius},${latKost},${longKost});
+  way["shop"="convenience"](around:${radius},${latKost},${longKost});
+  node["shop"="supermarket"](around:${radius},${latKost},${longKost});
+  way["shop"="supermarket"](around:${radius},${latKost},${longKost});
+  
   node["amenity"~"restaurant|cafe|fast_food"](around:${radius},${latKost},${longKost});
+  way["amenity"~"restaurant|cafe|fast_food"](around:${radius},${latKost},${longKost});
+  
   node["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
+  way["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
+  
   node["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
+  way["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
+  
+  node["shop"="copyshop"](around:${radius},${latKost},${longKost});
+  way["shop"="copyshop"](around:${radius},${latKost},${longKost});
+  node["shop"="stationery"](around:${radius},${latKost},${longKost});
+  way["shop"="stationery"](around:${radius},${latKost},${longKost});
+  
   node["amenity"="fuel"](around:${radius},${latKost},${longKost});
+  way["amenity"="fuel"](around:${radius},${latKost},${longKost});
+  node["highway"="bus_stop"](around:${radius},${latKost},${longKost});
+  node["amenity"="parking"](around:${radius},${latKost},${longKost});
+  way["amenity"="parking"](around:${radius},${latKost},${longKost});
 );
-out body;
+out center;
 `;
 
-                console.log('🔍 Mencari tempat terdekat... (Percobaan ke-' + (retryCount + 1) + ')');
+                console.log('🔍 Mencari tempat terdekat...'); // Debug log
 
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 detik timeout
-
                     const response = await fetch('https://overpass-api.de/api/interpreter', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
-                        body: 'data=' + encodeURIComponent(query),
-                        signal: controller.signal
+                        body: 'data=' + encodeURIComponent(query)
                     });
 
-                    clearTimeout(timeoutId);
+                    console.log('📡 Response status:', response.status); // Debug log
 
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
                     const data = await response.json();
-                    console.log('📦 Data diterima:', data.elements.length, 'tempat');
-
-                    // Reset retry counter on success
-                    retryCount = 0;
+                    console.log('📦 Data diterima:', data.elements.length, 'tempat'); // Debug log
 
                     const places = [];
 
                     data.elements.forEach(el => {
-                        if (el.type !== 'node' || !el.lat || !el.lon) return;
+                        let lat, lon;
 
-                        const jarak = hitungJarakJS(latKost, longKost, el.lat, el.lon);
+                        if (el.type === 'node') {
+                            lat = el.lat;
+                            lon = el.lon;
+                        } else if (el.type === 'way' && el.center) {
+                            lat = el.center.lat;
+                            lon = el.center.lon;
+                        } else {
+                            return;
+                        }
 
+                        if (!lat || !lon) return;
+
+                        const jarak = hitungJarakJS(latKost, longKost, lat, lon);
+
+                        // Kategorisasi
                         let category = 'lainnya';
                         const tags = el.tags || {};
 
-                        if (tags.amenity === 'hospital' || tags.amenity === 'clinic' || tags.amenity === 'pharmacy') {
+                        if (tags.amenity === 'hospital' || tags.amenity === 'clinic' ||
+                            tags.amenity === 'pharmacy' || tags.amenity === 'doctors') {
                             category = 'kesehatan';
                         } else if (tags.shop === 'convenience' || tags.shop === 'supermarket') {
                             category = 'minimarket';
-                        } else if (tags.amenity === 'restaurant' || tags.amenity === 'cafe' || tags.amenity === 'fast_food') {
+                        } else if (tags.amenity === 'restaurant' || tags.amenity === 'cafe' ||
+                            tags.amenity === 'fast_food') {
                             category = 'kuliner';
                         } else if (tags.amenity === 'bank' || tags.amenity === 'atm') {
                             category = 'bank';
                         } else if (tags.amenity === 'place_of_worship') {
                             category = 'ibadah';
-                        } else if (tags.amenity === 'fuel') {
+                        } else if (tags.shop === 'copyshop' || tags.shop === 'stationery') {
+                            category = 'print';
+                        } else if (tags.amenity === 'fuel' || tags.highway === 'bus_stop' ||
+                            tags.amenity === 'parking') {
                             category = 'transportasi';
                         }
 
-                        let name = tags.name || tags.brand || tags.operator || 'Tanpa Nama';
+                        // Nama tempat dengan prioritas
+                        let name = tags.name || tags.brand || tags.operator || tags['addr:housename'] || 'Tanpa Nama';
+
+                        // Tambahkan info tipe untuk tempat tanpa nama
+                        if (name === 'Tanpa Nama') {
+                            if (tags.amenity) name = tags.amenity.charAt(0).toUpperCase() + tags.amenity.slice(1);
+                            else if (tags.shop) name = tags.shop.charAt(0).toUpperCase() + tags.shop.slice(1);
+                        }
 
                         places.push({
                             name: name,
                             category: category,
                             jarak: parseFloat(jarak),
-                            lat: el.lat,
-                            lon: el.lon
+                            lat: lat,
+                            lon: lon
                         });
                     });
 
+                    console.log('✅ Total places found:', places.length); // Debug log
+
+                    // Sort by jarak
                     places.sort((a, b) => a.jarak - b.jarak);
+
+                    // Ambil max 12 terdekat
                     const topPlaces = places.slice(0, 12);
 
+                    // TAMPILKAN DI LIST & PETA
                     tampilkanTempatTerdekat(topPlaces);
-                    tampilkanMarkerDiPeta(topPlaces);
+                    tampilkanMarkerDiPeta(topPlaces); // TAMBAHAN BARU
 
                 } catch (error) {
-                    console.error('❌ Error:', error.message);
+                    console.error('❌ Error fetching nearby places:', error);
+                    console.error('Error details:', error.message);
 
-                    // Auto retry jika belum mencapai batas
-                    if (retryCount < MAX_RETRIES && error.name !== 'AbortError') {
-                        retryCount++;
-                        document.getElementById('nearby-places-container').innerHTML = `
-                            <div class="text-center py-3">
-                                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
-                                <p class="small text-muted mb-0">Mencoba lagi... (${retryCount}/${MAX_RETRIES})</p>
-                            </div>
-                        `;
-                        setTimeout(cariTempatTerdekat, 2000); // Retry setelah 2 detik
-                        return;
-                    }
-
-                    // Jika sudah retry maksimal atau timeout
-                    let errorMsg = 'Server Overpass tidak merespons';
-                    if (error.name === 'AbortError') {
-                        errorMsg = 'Koneksi timeout (>8 detik)';
-                    } else if (error.message.includes('504')) {
-                        errorMsg = 'Server sedang sibuk (504 Gateway Timeout)';
-                    } else if (error.message.includes('429')) {
-                        errorMsg = 'Terlalu banyak request, coba lagi nanti';
-                    }
-
+                    // Tampilkan pesan error yang lebih spesifik
                     document.getElementById('nearby-places-container').innerHTML = `
                         <div class="alert alert-warning small py-2 mb-0">
                             <i class="bi bi-exclamation-triangle"></i> 
                             <strong>Gagal memuat data</strong><br>
-                            <small class="text-muted">${errorMsg}</small>
+                            <small class="text-muted">${error.message || 'API Overpass tidak merespons'}</small>
                             <br>
-                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="manualRetry()">
+                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="cariTempatTerdekat()">
                                 <i class="bi bi-arrow-clockwise"></i> Coba Lagi
                             </button>
                         </div>
@@ -1150,29 +1167,75 @@ out body;
                 }
             }
 
-            function manualRetry() {
-                retryCount = 0; // Reset counter
-                document.getElementById('nearby-places-container').innerHTML = `
-                    <div class="loading-spinner">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        <p class="small text-muted mt-2">Mencari fasilitas sekitar...</p>
-                    </div>
-                `;
-                setTimeout(cariTempatTerdekat, 500);
+            function tampilkanTempatTerdekat(places) {
+                const container = document.getElementById('nearby-places-container');
+
+                if (places.length === 0) {
+                    container.innerHTML = `
+                        <div class="alert alert-light small py-2 mb-0 text-center">
+                            <i class="bi bi-info-circle"></i> Tidak ada fasilitas dalam radius 1 km.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="nearby-list-container"><div class="list-group list-group-flush">';
+
+                places.forEach((place, idx) => {
+                    const iconData = getIconAndColor(place.category);
+                    const jarakText = place.jarak < 1 ?
+                        `${(place.jarak * 1000).toFixed(0)} m` :
+                        `${place.jarak} km`;
+
+                    html += `
+                        <div class="nearby-place-item d-flex align-items-center gap-2" onclick="focusOnMarker(${idx})">
+                            <div class="nearby-icon" style="background: ${iconData.bg}; color: ${iconData.color}">
+                                <i class="bi ${iconData.icon}"></i>
+                            </div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <h6 class="mb-0 fw-bold text-truncate" style="font-size: 0.8rem">${formatNamaTempat(place.name)}</h6>
+                                <small class="text-muted" style="font-size: 0.7rem">
+                                    <i class="bi bi-geo-alt"></i> ${jarakText}
+                                </small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+
+                // Tambahkan info jumlah total jika lebih dari yang ditampilkan
+                if (places.length > 5) {
+                    html += `<div class="text-center mt-2">
+                        <small class="text-muted" style="font-size: 0.7rem">
+                            <i class="bi bi-arrow-down-circle"></i> Scroll untuk lihat ${places.length} tempat
+                        </small>
+                    </div>`;
+                }
+
+                container.innerHTML = html;
+            }
+
+            // FUNGSI UNTUK FOKUS KE MARKER SAAT ITEM DIKLIK
+            function focusOnMarker(index) {
+                if (nearbyMarkers[index]) {
+                    const marker = nearbyMarkers[index];
+                    map.flyTo(marker.getLatLng(), 16, {
+                        duration: 0.8
+                    });
+                    setTimeout(() => {
+                        marker.openPopup();
+                    }, 900);
+                }
             }
 
             // Jalankan pencarian saat halaman load dengan delay lebih lama
             setTimeout(() => {
-                if (map && map._loaded) { // Pastikan peta sudah siap
-                    cariTempatTerdekat();
-                } else {
-                    map.whenReady(() => {
-                        setTimeout(cariTempatTerdekat, 1000);
-                    });
-                }
-            }, 3000); // Delay 3 detik setelah halaman load
+                cariTempatTerdekat();
+            }, 2000); // Ubah dari 1000 ke 2000ms
         </script>
     <?php endif; ?>
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
