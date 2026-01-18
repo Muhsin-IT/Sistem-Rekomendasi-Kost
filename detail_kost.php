@@ -421,6 +421,58 @@ if (count($all_reviews) > 0) {
         text-align: center;
         padding: 20px;
     }
+
+    /* star-rating styles (Shopee-like: click star n fills 1..n from left) */
+    .stars {
+        display: flex;
+        flex-direction: row-reverse;
+        gap: 6px;
+        align-items: center;
+    }
+    .stars input { display: none; }
+
+    /* make each star label fill available width and show large star icon */
+    .stars label {
+        cursor: pointer;
+        flex: 1 1 0;
+        text-align: center;
+        padding: 8px 4px;
+        font-size: 2rem; /* larger clickable area */
+        color: #d1d5db;  /* inactive gray */
+        transition: color .12s ease-in-out, transform .08s;
+        line-height: 1;
+    }
+    .stars label .bi {
+        font-size: 1.8rem; /* icon size */
+        vertical-align: middle;
+        display: inline-block;
+    }
+
+    /* hover effect */
+    .stars label:hover,
+    .stars label:hover ~ label {
+        transform: scale(1.05);
+    }
+
+    /* akurasi = gold (checked and hover affect labels to the left visually) */
+    .stars.akurasi input:checked ~ label,
+    .stars.akurasi label:hover,
+    .stars.akurasi label:hover ~ label {
+        color: #ffc107; /* gold */
+    }
+
+    /* umum = green */
+    .stars.umum input:checked ~ label,
+    .stars.umum label:hover,
+    .stars.umum label:hover ~ label {
+        color: #198754; /* bootstrap-success */
+    }
+
+    /* ensure contrast for checked state on small screens */
+    @media (max-width: 480px) {
+        .stars label { font-size: 1.6rem; padding: 6px 2px; }
+        .stars label .bi { font-size: 1.4rem; }
+    }
 </style>
 </head>
 
@@ -643,7 +695,7 @@ if (count($all_reviews) > 0) {
                                                 <small class="text-muted" style="font-size: 0.75rem;">
                                                     <?= date('d M Y H:i', strtotime($rev['tanggal_review'])) ?>
                                                     <?php if (!is_null($rev['updated_at'])): ?>
-                                                        &middot; <em class="text-secondary">Diedit: <?= date('d M Y H:i', strtotime($rev['updated_at'])) ?></em>
+                                                        &middot; <em class="text-danger"><b>Diedit: <?= date('d M Y H:i', strtotime($rev['updated_at'])) ?></b></em>
                                                     <?php endif; ?>
                                                 </small>
                                             </div>
@@ -1449,20 +1501,20 @@ out center;
 
                     <div class="mb-3 border-bottom pb-3">
                         <label class="form-label fw-bold small">Akurasi Foto/Info (C5)</label>
-                        <div class="btn-group w-100" role="group">
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <input type="radio" class="btn-check" name="rating_akurasi" id="ak<?= $i ?>" value="<?= $i ?>" required>
-                                <label class="btn btn-outline-warning" for="ak<?= $i ?>"><?= $i ?></label>
+                        <div class="stars akurasi" role="radiogroup" aria-label="Akurasi">
+                            <?php for ($i = 5; $i >= 1; $i--): ?>
+                                <input type="radio" name="rating_akurasi" id="ak<?= $i ?>" value="<?= $i ?>" required>
+                                <label for="ak<?= $i ?>" title="<?= $i ?> dari 5"><i class="bi bi-star-fill"></i></label>
                             <?php endfor; ?>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Kepuasan Umum (C6)</label>
-                        <div class="btn-group w-100" role="group">
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <input type="radio" class="btn-check" name="rating_umum" id="um<?= $i ?>" value="<?= $i ?>" required>
-                                <label class="btn btn-outline-success" for="um<?= $i ?>"><?= $i ?></label>
+                        <div class="stars umum" role="radiogroup" aria-label="Kepuasan Umum">
+                            <?php for ($i = 5; $i >= 1; $i--): ?>
+                                <input type="radio" name="rating_umum" id="um<?= $i ?>" value="<?= $i ?>" required>
+                                <label for="um<?= $i ?>" title="<?= $i ?> dari 5"><i class="bi bi-star-fill"></i></label>
                             <?php endfor; ?>
                         </div>
                     </div>
@@ -1504,10 +1556,20 @@ out center;
         targetLong = long;
         userType = type;
 
+        // Reset UI then show modal. For 'sewa' skip GPS and enable langsung.
         resetGPSUI();
         var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
         myModal.show();
-        getLocation();
+
+        if (userType === 'sewa') {
+            // Penyewa tidak perlu verifikasi lokasi
+            document.getElementById('loadingGps').style.display = 'none';
+            document.getElementById('gpsText').innerHTML = "<i class='bi bi-house-fill'></i> Penyewa — verifikasi lokasi tidak diperlukan";
+            document.getElementById('jarakText').innerHTML = "Status: Penyewa (Tidak perlu verifikasi lokasi)";
+            enableButton();
+        } else {
+            getLocation();
+        }
     }
 
     // edit via GET param (or link). Jika ada edit_review param, kita panggil fungsi ini di page load.
@@ -1536,11 +1598,19 @@ out center;
                     }
 
                     userType = data.jenis_reviewer || 'survei';
-                    // targetLat/Long tetap dari kost
-                    resetGPSUI();
+                    // Jika edit mode atau penyewa, tidak perlu verifikasi lokasi
                     var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
                     myModal.show();
-                    getLocation();
+
+                    if (isEditMode || userType === 'sewa') {
+                        document.getElementById('loadingGps').style.display = 'none';
+                        document.getElementById('gpsText').innerHTML = "<i class='bi bi-pencil-square'></i> Edit — verifikasi lokasi tidak diperlukan";
+                        document.getElementById('jarakText').innerHTML = "Edit mode (Tidak perlu verifikasi lokasi)";
+                        enableButton();
+                    } else {
+                        resetGPSUI();
+                        getLocation();
+                    }
                 } else {
                     alert('Ulasan tidak ditemukan atau bukan milik Anda.');
                 }
@@ -1571,6 +1641,7 @@ out center;
         let uLat = position.coords.latitude;
         let uLong = position.coords.longitude;
         document.getElementById('userLat').value = uLat;
+       
         document.getElementById('userLong').value = uLong;
         let jarakMeter = hitungJarak(uLat, uLong, targetLat, targetLong);
 
