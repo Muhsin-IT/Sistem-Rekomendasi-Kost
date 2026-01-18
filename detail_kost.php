@@ -1181,7 +1181,7 @@ if (count($all_reviews) > 0) {
 
                 // QUERY YANG DIPERBAIKI & DISEDERHANAKAN
                 const query = `
-[out:json][timeout:25];
+[out:json][timeout:40];
 (
   node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
   way["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
