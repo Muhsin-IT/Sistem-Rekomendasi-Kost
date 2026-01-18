@@ -568,6 +568,65 @@ if ($is_logged_in) {
         </div>
     </div>
 
+    <!-- TAMBAHKAN MODAL REVIEW DI SINI -->
+    <div class="modal fade" id="modalReview" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6"><span id="namaKostReview" class="fw-bold"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="proses_ulasan.php">
+                    <div class="modal-body">
+                        <input type="hidden" name="id_review" id="idReviewEdit" value="">
+                        <input type="hidden" name="id_kost" id="idKostReview">
+                        <input type="hidden" name="id_kamar" id="idKamarReview" value="<?= $id_kamar ?>">
+                        <input type="hidden" name="user_lat" id="userLat">
+                        <input type="hidden" name="user_long" id="userLong">
+                        <input type="hidden" name="jenis_reviewer" id="jenisReviewer">
+
+                        <div id="gpsContainer" class="alert alert-secondary small py-2 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" id="loadingGps" role="status"></div>
+                                <span id="gpsText">Mendeteksi lokasi & alamat...</span>
+                            </div>
+                            <div id="jarakText" class="fw-bold mt-1 text-primary" style="font-size: 0.9em;"></div>
+                        </div>
+
+                        <div class="mb-3 border-bottom pb-3">
+                            <label class="form-label fw-bold small">Akurasi Foto/Info (C5)</label>
+                            <div class="stars akurasi" role="radiogroup" aria-label="Akurasi">
+                                <?php for ($i = 5; $i >= 1; $i--): ?>
+                                    <input type="radio" name="rating_akurasi" id="ak<?= $i ?>" value="<?= $i ?>">
+                                    <label for="ak<?= $i ?>" title="<?= $i ?> dari 5"><i class="bi bi-star-fill"></i></label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Kepuasan Umum (C6)</label>
+                            <div class="stars umum" role="radiogroup" aria-label="Kepuasan Umum">
+                                <?php for ($i = 5; $i >= 1; $i--): ?>
+                                    <input type="radio" name="rating_umum" id="um<?= $i ?>" value="<?= $i ?>">
+                                    <label for="um<?= $i ?>" title="<?= $i ?> dari 5"><i class="bi bi-star-fill"></i></label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <textarea name="komentar" id="komentarReview" class="form-control" rows="2" placeholder="Tulis pengalamanmu..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary w-100" id="btnKirimReview" disabled>
+                            <i class="bi bi-lock-fill"></i> Lokasi Belum Terverifikasi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="d-block d-lg-none fixed-bottom bg-white border-top p-3 shadow">
         <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -791,6 +850,194 @@ if ($is_logged_in) {
                 }
             });
         }
+
+        let targetLat = <?= $kamar['latitude'] ?: 0 ?>;
+        let targetLong = <?= $kamar['longitude'] ?: 0 ?>;
+        let userType = '';
+        let isEditMode = false;
+
+        function bukaModalReviewFromPage(id, nama, lat, long, type, id_kamar = '') {
+            isEditMode = false;
+            document.getElementById('idReviewEdit').value = '';
+            document.getElementById('idKostReview').value = id;
+            document.getElementById('idKamarReview').value = id_kamar || <?= (int)$id_kamar ?>;
+            document.getElementById('namaKostReview').innerText = nama;
+            document.getElementById('jenisReviewer').value = type;
+            document.getElementById('komentarReview').value = '';
+
+            document.querySelectorAll('input[name="rating_akurasi"]').forEach(el => el.checked = false);
+            document.querySelectorAll('input[name="rating_umum"]').forEach(el => el.checked = false);
+
+            targetLat = lat;
+            targetLong = long;
+            userType = type;
+
+            resetGPSUI();
+            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
+            myModal.show();
+
+            if (userType === 'sewa') {
+                document.getElementById('loadingGps').style.display = 'none';
+                document.getElementById('gpsText').innerHTML = "<i class='bi bi-house-fill'></i> Penyewa — verifikasi lokasi tidak diperlukan";
+                document.getElementById('jarakText').innerHTML = "Status: Penyewa (Tidak perlu verifikasi lokasi)";
+                enableButton();
+            } else {
+                getLocation();
+            }
+        }
+
+        function editReviewFromId(idReview) {
+            isEditMode = true;
+            document.getElementById('idReviewEdit').value = idReview;
+            document.getElementById('idKostReview').value = <?= (int)$id_kost ?>;
+            document.getElementById('namaKostReview').innerText = "<?= addslashes($kamar['nama_kost']) ?> (Edit)";
+
+            fetch('get_review?id=' + idReview)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('komentarReview').value = data.komentar || '';
+                        document.getElementById('idKamarReview').value = data.id_kamar || <?= (int)$id_kamar ?>;
+                        document.getElementById('jenisReviewer').value = data.jenis_reviewer || 'survei';
+
+                        if (data.skor_akurasi) {
+                            let akel = document.getElementById('ak' + data.skor_akurasi);
+                            if (akel) akel.checked = true;
+                        }
+                        if (data.rating) {
+                            let umel = document.getElementById('um' + data.rating);
+                            if (umel) umel.checked = true;
+                        }
+
+                        userType = data.jenis_reviewer || 'survei';
+                        var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
+                        myModal.show();
+
+                        if (isEditMode || userType === 'sewa') {
+                            document.getElementById('loadingGps').style.display = 'none';
+                            document.getElementById('gpsText').innerHTML = "<i class='bi bi-pencil-square'></i> Edit — verifikasi lokasi tidak diperlukan";
+                            document.getElementById('jarakText').innerHTML = "Edit mode (Tidak perlu verifikasi lokasi)";
+                            enableButton();
+                        } else {
+                            resetGPSUI();
+                            getLocation();
+                        }
+                    } else {
+                        alert('Ulasan tidak ditemukan atau bukan milik Anda.');
+                    }
+                });
+        }
+
+        function resetGPSUI() {
+            document.getElementById('gpsContainer').className = 'alert alert-secondary small py-2 mb-3';
+            document.getElementById('gpsText').innerHTML = 'Mendeteksi lokasi...';
+            document.getElementById('jarakText').innerHTML = '';
+            document.getElementById('loadingGps').style.display = 'inline-block';
+            disableButton('Menunggu Lokasi...');
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(processPosition, showError, {
+                    enableHighAccuracy: true
+                });
+            } else {
+                showError({
+                    message: "Browser tidak support GPS"
+                });
+            }
+        }
+
+        function processPosition(position) {
+            let uLat = position.coords.latitude;
+            let uLong = position.coords.longitude;
+            document.getElementById('userLat').value = uLat;
+            document.getElementById('userLong').value = uLong;
+            let jarakMeter = hitungJarak(uLat, uLong, targetLat, targetLong);
+
+            let url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${uLat}&lon=${uLong}&zoom=18&addressdetails=1`;
+
+            fetch(url).then(r => r.json()).then(data => {
+                let alamatBersih = data.display_name || "Alamat tidak ditemukan";
+                let alamatShort = alamatBersih.split(',').slice(0, 3).join(',');
+                document.getElementById('gpsText').innerHTML = `<i class='bi bi-geo-alt-fill'></i> ${alamatShort}`;
+                document.getElementById('loadingGps').style.display = 'none';
+                validasiJarak(jarakMeter);
+            }).catch(err => {
+                document.getElementById('gpsText').innerHTML = "Lokasi: " + uLat.toFixed(5) + ", " + uLong.toFixed(5);
+                document.getElementById('loadingGps').style.display = 'none';
+                validasiJarak(jarakMeter);
+            });
+        }
+
+        function validasiJarak(meter) {
+            let statusBox = document.getElementById('gpsContainer');
+            let jarakText = document.getElementById('jarakText');
+
+            if (userType === 'sewa') {
+                statusBox.className = 'alert alert-success small py-2 mb-3';
+                jarakText.innerHTML = `Status: Penyewa (Bebas Review dari mana saja)`;
+                enableButton();
+            } else {
+                if (meter <= 30) {
+                    statusBox.className = 'alert alert-success small py-2 mb-3';
+                    jarakText.innerHTML = `Jarak: ${meter} meter (Dalam jangkauan)`;
+                    enableButton();
+                } else {
+                    statusBox.className = 'alert alert-danger small py-2 mb-3';
+                    jarakText.innerHTML = `Kamu berada ${meter}m dari kost (penilaian hanya dapat dilakukan di area kost)`;
+                    disableButton('Lokasi Terlalu Jauh');
+                }
+            }
+        }
+
+        function hitungJarak(lat1, lon1, lat2, lon2) {
+            if ((lat1 == lat2) && (lon1 == lon2)) return 0;
+            var radlat1 = Math.PI * lat1 / 180;
+            var radlat2 = Math.PI * lat2 / 180;
+            var theta = lon1 - lon2;
+            var radtheta = Math.PI * theta / 180;
+            var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+            if (dist > 1) dist = 1;
+            dist = Math.acos(dist);
+            dist = dist * 180 / Math.PI;
+            dist = dist * 60 * 1.1515;
+            dist = dist * 1.609344 * 1000;
+            return Math.round(dist);
+        }
+
+        function enableButton() {
+            let btn = document.getElementById('btnKirimReview');
+            btn.disabled = false;
+            btn.innerHTML = isEditMode ? '<i class="bi bi-check-circle"></i> Update Ulasan' : '<i class="bi bi-send"></i> Kirim Ulasan';
+            btn.className = 'btn btn-primary w-100';
+        }
+
+        function disableButton(msg) {
+            let btn = document.getElementById('btnKirimReview');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="bi bi-x-circle"></i> ${msg}`;
+            btn.className = 'btn btn-secondary w-100';
+        }
+
+        function showError(error) {
+            document.getElementById('gpsText').innerHTML = "Gagal ambil lokasi. Izinkan GPS!";
+            document.getElementById('loadingGps').style.display = 'none';
+            disableButton('GPS Error');
+        }
+
+        // Jika halaman dibuka dengan parameter edit_review, otomatis buka modal edit
+        <?php if (isset($_GET['edit_review'])): ?>
+            window.addEventListener('DOMContentLoaded', function() {
+                editReviewFromId(<?= (int)$_GET['edit_review'] ?>);
+            });
+        <?php elseif (isset($_GET['reviewer'])): // jika diarahkan untuk memberi ulasan (survei/sewa) buka modal baru 
+        ?>
+            window.addEventListener('DOMContentLoaded', function() {
+                // jika id_kamar diberikan lewat query string, isi juga
+                bukaModalReviewFromPage('<?= $id_kost ?>', '<?= addslashes($kamar['nama_kost']) ?>', <?= $kamar['latitude'] ?: 0 ?>, <?= $kamar['longitude'] ?: 0 ?>, '<?= $_GET['reviewer'] ?>', '<?= isset($_GET['id_kamar']) ? (int)$_GET['id_kamar'] : (int)$id_kamar ?>');
+            });
+        <?php endif; ?>
     </script>
     <?php include 'footer.php'; ?>
 </body>

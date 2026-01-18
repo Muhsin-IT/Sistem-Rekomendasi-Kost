@@ -107,9 +107,20 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                                                         <i class="bi bi-pencil"></i> Edit Ulasan
                                                     </a>
                                                 <?php else: ?>
-                                                    <a href="detail_kost?id=<?= $s['id_kost'] ?>&reviewer=survei#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
-                                                        <i class="bi bi-star"></i> Nilai Akurasi
-                                                    </a>
+                                                    <?php
+                                                    // cari kamar pertama dari kost agar survei bisa diarahkan ke halaman kamar
+                                                    $first_kamar_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT id_kamar FROM kamar WHERE id_kost='{$s['id_kost']}' LIMIT 1"));
+                                                    $target_kamar_id = $first_kamar_row ? $first_kamar_row['id_kamar'] : null;
+                                                    if ($target_kamar_id):
+                                                    ?>
+                                                        <a href="detail_kamar?id=<?= $target_kamar_id ?>&reviewer=survei#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                            <i class="bi bi-star"></i> Nilai Akurasi
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <a href="detail_kost?id=<?= $s['id_kost'] ?>&reviewer=survei#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                            <i class="bi bi-star"></i> Nilai Akurasi
+                                                        </a>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
 
                                             <?php elseif ($s['status'] == 'Menunggu'): ?>
@@ -166,8 +177,8 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                                                         <i class="bi bi-pencil"></i> Edit Ulasan
                                                     </a>
                                                 <?php else: ?>
-                                                    <!-- sertakan id_kamar agar saat diarahkan ke detail_kost id_kamar dapat terisi -->
-                                                    <a href="detail_kost?id=<?= $r['id_kost'] ?>&reviewer=sewa&id_kamar=<?= $r['id_kamar'] ?>#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                    <!-- arahkan ke detail_kamar supaya id_kamar terisi -->
+                                                    <a href="detail_kamar?id=<?= $r['id_kamar'] ?>&reviewer=sewa#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
                                                         <i class="bi bi-star"></i> Beri Ulasan
                                                     </a>
                                                 <?php endif; ?>

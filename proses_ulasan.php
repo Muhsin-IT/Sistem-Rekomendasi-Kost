@@ -12,7 +12,7 @@ $id_user = $_SESSION['id_user'];
 
 // Ambil dan sanitasi input
 $id_kost        = isset($_POST['id_kost']) ? (int)$_POST['id_kost'] : 0;
-$id_kamar       = isset($_POST['id_kamar']) ? (int)$_POST['id_kamar'] : null;
+$id_kamar       = isset($_POST['id_kamar']) && $_POST['id_kamar'] !== '' ? (int)$_POST['id_kamar'] : 0; // gunakan 0 sebagai sentinel => di SQL kita konversi 0 => NULL dengan NULLIF(?,0)
 $akurasi        = isset($_POST['rating_akurasi']) ? (int)$_POST['rating_akurasi'] : 0;
 $umum           = isset($_POST['rating_umum']) ? (int)$_POST['rating_umum'] : 0;
 $jenis_reviewer = isset($_POST['jenis_reviewer']) ? $_POST['jenis_reviewer'] : null; // expect 'sewa' or 'survei'
@@ -40,7 +40,8 @@ if (!empty($_POST['id_review'])) {
     }
 
     // Update review; set updated_at = CURRENT_TIMESTAMP
-    $stmt = mysqli_prepare($conn, "UPDATE review SET id_kamar = ?, skor_akurasi = ?, rating = ?, komentar = ?, jenis_reviewer = ?, updated_at = CURRENT_TIMESTAMP WHERE id_review = ?");
+    // gunakan NULLIF(?,0) agar id_kamar=0 disimpan sebagai NULL
+    $stmt = mysqli_prepare($conn, "UPDATE review SET id_kamar = NULLIF(?,0), skor_akurasi = ?, rating = ?, komentar = ?, jenis_reviewer = ?, updated_at = CURRENT_TIMESTAMP WHERE id_review = ?");
     mysqli_stmt_bind_param($stmt, "iiissi", $id_kamar, $akurasi, $umum, $komen, $jenis_reviewer, $id_review);
     if (mysqli_stmt_execute($stmt)) {
         mysqli_stmt_close($stmt);
@@ -69,8 +70,10 @@ if ($dup_count > 0) {
 }
 
 // Insert baru
-$stmtIns = mysqli_prepare($conn, "INSERT INTO review (id_user, id_kost, id_kamar, skor_akurasi, rating, komentar, jenis_reviewer) VALUES (?, ?, ?, ?, ?, ?, ?)");
-mysqli_stmt_bind_param($stmtIns, "iiiisss", $id_user, $id_kost, $id_kamar, $akurasi, $umum, $komen, $jenis_reviewer);
+// gunakan NULLIF(?,0) agar id_kamar=0 disimpan sebagai NULL
+$stmtIns = mysqli_prepare($conn, "INSERT INTO review (id_user, id_kost, id_kamar, skor_akurasi, rating, komentar, jenis_reviewer) VALUES (?, ?, NULLIF(?,0), ?, ?, ?, ?)");
+// tipe: id_user i, id_kost i, id_kamar i, skor_akurasi i, rating i, komentar s, jenis_reviewer s => "iiiiiss"
+mysqli_stmt_bind_param($stmtIns, "iiiiiss", $id_user, $id_kost, $id_kamar, $akurasi, $umum, $komen, $jenis_reviewer);
 
 if (mysqli_stmt_execute($stmtIns)) {
     mysqli_stmt_close($stmtIns);
