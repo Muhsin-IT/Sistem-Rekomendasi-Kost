@@ -45,12 +45,7 @@ while ($row = mysqli_fetch_assoc($q_kam)) {
     $kamars[] = $row;
 }
 // ==================================================== review & RATING ====================================================
-// Perbarui query: JOIN users + LEFT JOIN kamar untuk dapat menampilkan nama_kamar saat ada id_kamar
-$q_review = mysqli_query($conn, "SELECT r.*, u.nama_lengkap, k.nama_tipe_kamar FROM review r 
-    JOIN users u ON r.id_user = u.id_user 
-    LEFT JOIN kamar k ON r.id_kamar = k.id_kamar
-    WHERE r.id_kost='$id_kost' ORDER BY r.tanggal_review DESC");
-
+$q_review = mysqli_query($conn, "SELECT r.*, u.nama_lengkap FROM review r JOIN users u ON r.id_user = u.id_user WHERE r.id_kost='$id_kost' ORDER BY r.tanggal_review DESC");
 $total_review = mysqli_num_rows($q_review);
 $avg_rating   = 0;
 $avg_akurasi  = 0;
@@ -60,8 +55,8 @@ if ($total_review > 0) {
     $sum_rating  = 0;
     $sum_akurasi = 0;
     while ($r = mysqli_fetch_assoc($q_review)) {
-        $sum_rating  += (int)$r['rating'];
-        $sum_akurasi += (int)$r['skor_akurasi'];
+        $sum_rating  += $r['rating'];
+        $sum_akurasi += $r['skor_akurasi'];
         $list_review[] = $r;
     }
     $avg_rating  = round($sum_rating / $total_review, 1);
@@ -531,12 +526,7 @@ if (count($all_reviews) > 0) {
                     </div>
                 <?php endforeach; ?>
                 <div class="mt-5 mb-5">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="fw-bold mb-0">Ulasan & Rating Akurasi</h4>
-                        <?php if (isset($_SESSION['login'])): ?>
-                            <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary" onclick="bukaModalReviewFromPage('<?= $id_kost ?>','<?= addslashes($kost['nama_kost']) ?>', <?= $kost['latitude'] ?: 0 ?>, <?= $kost['longitude'] ?: 0 ?>, 'survei')">Beri Ulasan</a>
-                        <?php endif; ?>
-                    </div>
+                    <h4 class="fw-bold mb-4">Ulasan & Rating Akurasi</h4>
 
                     <?php if (isset($ai_review_summary['status']) && $ai_review_summary['status'] == 'success'): ?>
                         <div class="card border-0 shadow-sm bg-light mb-4">
@@ -628,7 +618,7 @@ if (count($all_reviews) > 0) {
                                             <div>
                                                 <div class="d-flex align-items-center gap-2">
                                                     <h6 class="fw-bold mb-0"><?= $rev['nama_lengkap'] ?></h6>
-                                                    <?php if (!empty($rev['jenis_reviewer'])): ?>
+                                                    <?php if (isset($rev['jenis_reviewer'])): ?>
                                                         <?php if ($rev['jenis_reviewer'] == 'sewa'): ?>
                                                             <span class="badge bg-success" style="font-size: 0.65rem;">
                                                                 <i class="bi bi-house-check-fill"></i> Anak Kost
@@ -641,10 +631,7 @@ if (count($all_reviews) > 0) {
                                                     <?php endif; ?>
                                                 </div>
                                                 <small class="text-muted" style="font-size: 0.75rem;">
-                                                    <?= date('d M Y H:i', strtotime($rev['tanggal_review'])) ?>
-                                                    <?php if (!is_null($rev['updated_at'])): ?>
-                                                        &middot; <em class="text-secondary">Diedit: <?= date('d M Y H:i', strtotime($rev['updated_at'])) ?></em>
-                                                    <?php endif; ?>
+                                                    <?= date('d M Y', strtotime($rev['tanggal_review'])) ?>
                                                 </small>
                                             </div>
                                         </div>
@@ -652,25 +639,11 @@ if (count($all_reviews) > 0) {
                                             <span class="badge bg-light text-warning border"><i class="bi bi-star-fill"></i> <?= $rev['rating'] ?></span>
                                         </div>
                                     </div>
-
                                     <p class="mb-1 text-dark"><?= htmlspecialchars($rev['komentar']) ?></p>
-
                                     <div class="d-flex gap-3">
                                         <small class="text-muted" style="font-size: 0.75rem;">
                                             <i class="bi bi-shield-check text-primary"></i> Akurasi: <strong><?= $rev['skor_akurasi'] ?>/5</strong>
                                         </small>
-
-                                        <!-- Jika review sudah pernah diupdate tampilkan dari kamar apa -->
-                                        <?php if (!is_null($rev['updated_at']) && !empty($rev['nama_tipe_kamar'])): ?>
-                                            <small class="text-muted" style="font-size:0.75rem;">
-                                                <i class="bi bi-door-open"></i> Dari kamar: <strong><?= htmlspecialchars($rev['nama_tipe_kamar']) ?></strong>
-                                            </small>
-                                        <?php endif; ?>
-
-                                        <!-- Tombol edit (hanya untuk pemilik ulasan) -->
-                                        <?php if (isset($_SESSION['login']) && $_SESSION['id_user'] == $rev['id_user']): ?>
-                                            <a href="detail_kost?id=<?= $id_kost ?>&edit_review=<?= $rev['id_review'] ?>#ulasan" class="btn btn-sm btn-outline-warning rounded-pill ms-auto">Edit</a>
-                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -1046,278 +1019,130 @@ if (count($all_reviews) > 0) {
             }
 
             // ============================================
-            // FUNGSI PENCARIAN TEMPAT TERDEKAT
+            // FUNGSI PENCARIAN TEMPAT TERDEKAT (DIPERBAIKI)
             // ============================================
 
-            function hitungJarakJS(lat1, lon1, lat2, lon2) {
-                const R = 6371; // Radius bumi dalam km
-                const dLat = (lat2 - lat1) * Math.PI / 180;
-                const dLon = (lon2 - lon1) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return (R * c).toFixed(1);
-            }
-
-            function getIconAndColor(category) {
-                const icons = {
-                    'kesehatan': {
-                        icon: 'bi-hospital',
-                        color: '#dc3545',
-                        bg: '#ffe5e8'
-                    },
-                    'minimarket': {
-                        icon: 'bi-shop',
-                        color: '#198754',
-                        bg: '#e6f9f0'
-                    },
-                    'kuliner': {
-                        icon: 'bi-cup-straw',
-                        color: '#fd7e14',
-                        bg: '#fff4e6'
-                    },
-                    'bank': {
-                        icon: 'bi-bank',
-                        color: '#0dcaf0',
-                        bg: '#e5f9ff'
-                    },
-                    'ibadah': {
-                        icon: 'bi-moon-stars',
-                        color: '#6f42c1',
-                        bg: '#f3ebff'
-                    },
-                    'print': {
-                        icon: 'bi-printer',
-                        color: '#20c997',
-                        bg: '#e6fff8'
-                    },
-                    'transportasi': {
-                        icon: 'bi-fuel-pump',
-                        color: '#0d6efd',
-                        bg: '#e7f1ff'
-                    }
-                };
-                return icons[category] || {
-                    icon: 'bi-geo-alt',
-                    color: '#6c757d',
-                    bg: '#f0f0f0'
-                };
-            }
-
-            function formatNamaTempat(name) {
-                if (!name) return 'Tanpa Nama';
-                return name.length > 30 ? name.substring(0, 30) + '...' : name;
-            }
-
-            // FUNGSI UNTUK MEMBUAT MARKER ICON CUSTOM
-            function createCustomMarkerIcon(category) {
-                const iconData = getIconAndColor(category);
-
-                // Buat HTML icon dengan Bootstrap Icons
-                const iconHtml = `
-                    <div style="
-                        background: ${iconData.bg};
-                        color: ${iconData.color};
-                        width: 28px;
-                        height: 28px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border: 2px solid ${iconData.color};
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                        font-size: 14px;
-                    ">
-                        <i class="bi ${iconData.icon}"></i>
-                    </div>
-                `;
-
-                return L.divIcon({
-                    html: iconHtml,
-                    className: 'custom-marker-icon',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14],
-                    popupAnchor: [0, -14]
-                });
-            }
-
-            // FUNGSI UNTUK MENAMPILKAN MARKER DI PETA
-            function tampilkanMarkerDiPeta(places) {
-                // Hapus marker lama
-                nearbyMarkers.forEach(marker => map.removeLayer(marker));
-                nearbyMarkers = [];
-
-                // Tambah marker baru untuk setiap tempat
-                places.forEach(place => {
-                    const customIcon = createCustomMarkerIcon(place.category);
-
-                    const marker = L.marker([place.lat, place.lon], {
-                        icon: customIcon
-                    }).addTo(map);
-
-                    const jarakText = place.jarak < 1 ?
-                        `${(place.jarak * 1000).toFixed(0)} m` :
-                        `${place.jarak} km`;
-
-                    // Popup dengan info tempat
-                    marker.bindPopup(`
-                        <div style="min-width: 150px;">
-                            <h6 class="fw-bold mb-1" style="font-size: 0.85rem;">${place.name}</h6>
-                            <small class="text-muted">
-                                <i class="bi bi-geo-alt"></i> ${jarakText} dari kost
-                            </small>
-                        </div>
-                    `);
-
-                    nearbyMarkers.push(marker);
-                });
-
-                console.log(`✅ ${nearbyMarkers.length} marker ditambahkan ke peta`);
-            }
+            let retryCount = 0;
+            const MAX_RETRIES = 2;
 
             async function cariTempatTerdekat() {
-                const radius = 1000; // 1 km dalam meter
+                const radius = 1000;
 
-                // QUERY YANG DIPERBAIKI & DISEDERHANAKAN
+                // QUERY YANG DISEDERHANAKAN - Hanya kategori penting
                 const query = `
-[out:json][timeout:25];
+[out:json][timeout:30];
 (
-  node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
-  way["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${latKost},${longKost});
-  
-  node["shop"="convenience"](around:${radius},${latKost},${longKost});
-  way["shop"="convenience"](around:${radius},${latKost},${longKost});
-  node["shop"="supermarket"](around:${radius},${latKost},${longKost});
-  way["shop"="supermarket"](around:${radius},${latKost},${longKost});
-  
+  node["amenity"~"hospital|clinic|pharmacy"](around:${radius},${latKost},${longKost});
+  node["shop"~"convenience|supermarket"](around:${radius},${latKost},${longKost});
   node["amenity"~"restaurant|cafe|fast_food"](around:${radius},${latKost},${longKost});
-  way["amenity"~"restaurant|cafe|fast_food"](around:${radius},${latKost},${longKost});
-  
   node["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
-  way["amenity"~"bank|atm"](around:${radius},${latKost},${longKost});
-  
   node["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
-  way["amenity"="place_of_worship"](around:${radius},${latKost},${longKost});
-  
-  node["shop"="copyshop"](around:${radius},${latKost},${longKost});
-  way["shop"="copyshop"](around:${radius},${latKost},${longKost});
-  node["shop"="stationery"](around:${radius},${latKost},${longKost});
-  way["shop"="stationery"](around:${radius},${latKost},${longKost});
-  
   node["amenity"="fuel"](around:${radius},${latKost},${longKost});
-  way["amenity"="fuel"](around:${radius},${latKost},${longKost});
-  node["highway"="bus_stop"](around:${radius},${latKost},${longKost});
-  node["amenity"="parking"](around:${radius},${latKost},${longKost});
-  way["amenity"="parking"](around:${radius},${latKost},${longKost});
 );
-out center;
+out body;
 `;
 
-                console.log('🔍 Mencari tempat terdekat...'); // Debug log
+                console.log('🔍 Mencari tempat terdekat... (Percobaan ke-' + (retryCount + 1) + ')');
 
                 try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 detik timeout
+
                     const response = await fetch('https://overpass-api.de/api/interpreter', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
-                        body: 'data=' + encodeURIComponent(query)
+                        body: 'data=' + encodeURIComponent(query),
+                        signal: controller.signal
                     });
 
-                    console.log('📡 Response status:', response.status); // Debug log
+                    clearTimeout(timeoutId);
 
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
 
                     const data = await response.json();
-                    console.log('📦 Data diterima:', data.elements.length, 'tempat'); // Debug log
+                    console.log('📦 Data diterima:', data.elements.length, 'tempat');
+
+                    // Reset retry counter on success
+                    retryCount = 0;
 
                     const places = [];
 
                     data.elements.forEach(el => {
-                        let lat, lon;
+                        if (el.type !== 'node' || !el.lat || !el.lon) return;
 
-                        if (el.type === 'node') {
-                            lat = el.lat;
-                            lon = el.lon;
-                        } else if (el.type === 'way' && el.center) {
-                            lat = el.center.lat;
-                            lon = el.center.lon;
-                        } else {
-                            return;
-                        }
+                        const jarak = hitungJarakJS(latKost, longKost, el.lat, el.lon);
 
-                        if (!lat || !lon) return;
-
-                        const jarak = hitungJarakJS(latKost, longKost, lat, lon);
-
-                        // Kategorisasi
                         let category = 'lainnya';
                         const tags = el.tags || {};
 
-                        if (tags.amenity === 'hospital' || tags.amenity === 'clinic' ||
-                            tags.amenity === 'pharmacy' || tags.amenity === 'doctors') {
+                        if (tags.amenity === 'hospital' || tags.amenity === 'clinic' || tags.amenity === 'pharmacy') {
                             category = 'kesehatan';
                         } else if (tags.shop === 'convenience' || tags.shop === 'supermarket') {
                             category = 'minimarket';
-                        } else if (tags.amenity === 'restaurant' || tags.amenity === 'cafe' ||
-                            tags.amenity === 'fast_food') {
+                        } else if (tags.amenity === 'restaurant' || tags.amenity === 'cafe' || tags.amenity === 'fast_food') {
                             category = 'kuliner';
                         } else if (tags.amenity === 'bank' || tags.amenity === 'atm') {
                             category = 'bank';
                         } else if (tags.amenity === 'place_of_worship') {
                             category = 'ibadah';
-                        } else if (tags.shop === 'copyshop' || tags.shop === 'stationery') {
-                            category = 'print';
-                        } else if (tags.amenity === 'fuel' || tags.highway === 'bus_stop' ||
-                            tags.amenity === 'parking') {
+                        } else if (tags.amenity === 'fuel') {
                             category = 'transportasi';
                         }
 
-                        // Nama tempat dengan prioritas
-                        let name = tags.name || tags.brand || tags.operator || tags['addr:housename'] || 'Tanpa Nama';
-
-                        // Tambahkan info tipe untuk tempat tanpa nama
-                        if (name === 'Tanpa Nama') {
-                            if (tags.amenity) name = tags.amenity.charAt(0).toUpperCase() + tags.amenity.slice(1);
-                            else if (tags.shop) name = tags.shop.charAt(0).toUpperCase() + tags.shop.slice(1);
-                        }
+                        let name = tags.name || tags.brand || tags.operator || 'Tanpa Nama';
 
                         places.push({
                             name: name,
                             category: category,
                             jarak: parseFloat(jarak),
-                            lat: lat,
-                            lon: lon
+                            lat: el.lat,
+                            lon: el.lon
                         });
                     });
 
-                    console.log('✅ Total places found:', places.length); // Debug log
-
-                    // Sort by jarak
                     places.sort((a, b) => a.jarak - b.jarak);
-
-                    // Ambil max 12 terdekat
                     const topPlaces = places.slice(0, 12);
 
-                    // TAMPILKAN DI LIST & PETA
                     tampilkanTempatTerdekat(topPlaces);
-                    tampilkanMarkerDiPeta(topPlaces); // TAMBAHAN BARU
+                    tampilkanMarkerDiPeta(topPlaces);
 
                 } catch (error) {
-                    console.error('❌ Error fetching nearby places:', error);
-                    console.error('Error details:', error.message);
+                    console.error('❌ Error:', error.message);
 
-                    // Tampilkan pesan error yang lebih spesifik
+                    // Auto retry jika belum mencapai batas
+                    if (retryCount < MAX_RETRIES && error.name !== 'AbortError') {
+                        retryCount++;
+                        document.getElementById('nearby-places-container').innerHTML = `
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                <p class="small text-muted mb-0">Mencoba lagi... (${retryCount}/${MAX_RETRIES})</p>
+                            </div>
+                        `;
+                        setTimeout(cariTempatTerdekat, 2000); // Retry setelah 2 detik
+                        return;
+                    }
+
+                    // Jika sudah retry maksimal atau timeout
+                    let errorMsg = 'Server Overpass tidak merespons';
+                    if (error.name === 'AbortError') {
+                        errorMsg = 'Koneksi timeout (>8 detik)';
+                    } else if (error.message.includes('504')) {
+                        errorMsg = 'Server sedang sibuk (504 Gateway Timeout)';
+                    } else if (error.message.includes('429')) {
+                        errorMsg = 'Terlalu banyak request, coba lagi nanti';
+                    }
+
                     document.getElementById('nearby-places-container').innerHTML = `
                         <div class="alert alert-warning small py-2 mb-0">
                             <i class="bi bi-exclamation-triangle"></i> 
                             <strong>Gagal memuat data</strong><br>
-                            <small class="text-muted">${error.message || 'API Overpass tidak merespons'}</small>
+                            <small class="text-muted">${errorMsg}</small>
                             <br>
-                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="cariTempatTerdekat()">
+                            <button class="btn btn-sm btn-outline-warning mt-2" onclick="manualRetry()">
                                 <i class="bi bi-arrow-clockwise"></i> Coba Lagi
                             </button>
                         </div>
@@ -1325,72 +1150,27 @@ out center;
                 }
             }
 
-            function tampilkanTempatTerdekat(places) {
-                const container = document.getElementById('nearby-places-container');
-
-                if (places.length === 0) {
-                    container.innerHTML = `
-                        <div class="alert alert-light small py-2 mb-0 text-center">
-                            <i class="bi bi-info-circle"></i> Tidak ada fasilitas dalam radius 1 km.
-                        </div>
-                    `;
-                    return;
-                }
-
-                let html = '<div class="nearby-list-container"><div class="list-group list-group-flush">';
-
-                places.forEach((place, idx) => {
-                    const iconData = getIconAndColor(place.category);
-                    const jarakText = place.jarak < 1 ?
-                        `${(place.jarak * 1000).toFixed(0)} m` :
-                        `${place.jarak} km`;
-
-                    html += `
-                        <div class="nearby-place-item d-flex align-items-center gap-2" onclick="focusOnMarker(${idx})">
-                            <div class="nearby-icon" style="background: ${iconData.bg}; color: ${iconData.color}">
-                                <i class="bi ${iconData.icon}"></i>
-                            </div>
-                            <div class="flex-grow-1 overflow-hidden">
-                                <h6 class="mb-0 fw-bold text-truncate" style="font-size: 0.8rem">${formatNamaTempat(place.name)}</h6>
-                                <small class="text-muted" style="font-size: 0.7rem">
-                                    <i class="bi bi-geo-alt"></i> ${jarakText}
-                                </small>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += '</div></div>';
-
-                // Tambahkan info jumlah total jika lebih dari yang ditampilkan
-                if (places.length > 5) {
-                    html += `<div class="text-center mt-2">
-                        <small class="text-muted" style="font-size: 0.7rem">
-                            <i class="bi bi-arrow-down-circle"></i> Scroll untuk lihat ${places.length} tempat
-                        </small>
-                    </div>`;
-                }
-
-                container.innerHTML = html;
-            }
-
-            // FUNGSI UNTUK FOKUS KE MARKER SAAT ITEM DIKLIK
-            function focusOnMarker(index) {
-                if (nearbyMarkers[index]) {
-                    const marker = nearbyMarkers[index];
-                    map.flyTo(marker.getLatLng(), 16, {
-                        duration: 0.8
-                    });
-                    setTimeout(() => {
-                        marker.openPopup();
-                    }, 900);
-                }
+            function manualRetry() {
+                retryCount = 0; // Reset counter
+                document.getElementById('nearby-places-container').innerHTML = `
+                    <div class="loading-spinner">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <p class="small text-muted mt-2">Mencari fasilitas sekitar...</p>
+                    </div>
+                `;
+                setTimeout(cariTempatTerdekat, 500);
             }
 
             // Jalankan pencarian saat halaman load dengan delay lebih lama
             setTimeout(() => {
-                cariTempatTerdekat();
-            }, 2000); // Ubah dari 1000 ke 2000ms
+                if (map && map._loaded) { // Pastikan peta sudah siap
+                    cariTempatTerdekat();
+                } else {
+                    map.whenReady(() => {
+                        setTimeout(cariTempatTerdekat, 1000);
+                    });
+                }
+            }, 3000); // Delay 3 detik setelah halaman load
         </script>
     <?php endif; ?>
 
@@ -1421,240 +1201,3 @@ out center;
 </body>
 
 </html>
-
-<!-- TAMBAHKAN MODAL REVIEW DI SINI (dipindahkan dari riwayat_sewa) -->
-<div class="modal fade" id="modalReview" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fs-6"><span id="namaKostReview" class="fw-bold"></span></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="proses_ulasan">
-                <div class="modal-body">
-                    <input type="hidden" name="id_review" id="idReviewEdit" value="">
-                    <input type="hidden" name="id_kost" id="idKostReview">
-                    <input type="hidden" name="id_kamar" id="idKamarReview">
-                    <input type="hidden" name="user_lat" id="userLat">
-                    <input type="hidden" name="user_long" id="userLong">
-                    <input type="hidden" name="jenis_reviewer" id="jenisReviewer">
-
-                    <div id="gpsContainer" class="alert alert-secondary small py-2 mb-3">
-                        <div class="d-flex align-items-center">
-                            <div class="spinner-border spinner-border-sm me-2" id="loadingGps" role="status"></div>
-                            <span id="gpsText">Mendeteksi lokasi & alamat...</span>
-                        </div>
-                        <div id="jarakText" class="fw-bold mt-1 text-primary" style="font-size: 0.9em;"></div>
-                    </div>
-
-                    <div class="mb-3 border-bottom pb-3">
-                        <label class="form-label fw-bold small">Akurasi Foto/Info (C5)</label>
-                        <div class="btn-group w-100" role="group">
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <input type="radio" class="btn-check" name="rating_akurasi" id="ak<?= $i ?>" value="<?= $i ?>" required>
-                                <label class="btn btn-outline-warning" for="ak<?= $i ?>"><?= $i ?></label>
-                            <?php endfor; ?>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">Kepuasan Umum (C6)</label>
-                        <div class="btn-group w-100" role="group">
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <input type="radio" class="btn-check" name="rating_umum" id="um<?= $i ?>" value="<?= $i ?>" required>
-                                <label class="btn btn-outline-success" for="um<?= $i ?>"><?= $i ?></label>
-                            <?php endfor; ?>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <textarea name="komentar" id="komentarReview" class="form-control" rows="2" placeholder="Tulis pengalamanmu..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary w-100" id="btnKirimReview" disabled>
-                        <i class="bi bi-lock-fill"></i> Lokasi Belum Terverifikasi
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- JS modal & GPS (ringkas, sama behavior seperti sebelumnya) -->
-<script>
-    let targetLat = <?= $kost['latitude'] ?: 0 ?>;
-    let targetLong = <?= $kost['longitude'] ?: 0 ?>;
-    let userType = '';
-    let isEditMode = false;
-
-    function bukaModalReviewFromPage(id, nama, lat, long, type, id_kamar = '') {
-        isEditMode = false;
-        document.getElementById('idReviewEdit').value = '';
-        document.getElementById('idKostReview').value = id;
-        document.getElementById('idKamarReview').value = id_kamar;
-        document.getElementById('namaKostReview').innerText = nama;
-        document.getElementById('jenisReviewer').value = type;
-        document.getElementById('komentarReview').value = '';
-
-        document.querySelectorAll('input[name="rating_akurasi"]').forEach(el => el.checked = false);
-        document.querySelectorAll('input[name="rating_umum"]').forEach(el => el.checked = false);
-
-        targetLat = lat;
-        targetLong = long;
-        userType = type;
-
-        resetGPSUI();
-        var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
-        myModal.show();
-        getLocation();
-    }
-
-    // edit via GET param (or link). Jika ada edit_review param, kita panggil fungsi ini di page load.
-    function editReviewFromId(idReview) {
-        isEditMode = true;
-        document.getElementById('idReviewEdit').value = idReview;
-        document.getElementById('idKostReview').value = <?= (int)$id_kost ?>;
-        document.getElementById('namaKostReview').innerText = "<?= addslashes($kost['nama_kost']) ?> (Edit)";
-
-        // Ambil data lewat AJAX
-        fetch('get_review.php?id=' + idReview)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('komentarReview').value = data.komentar || '';
-                    document.getElementById('idKamarReview').value = data.id_kamar || '';
-                    document.getElementById('jenisReviewer').value = data.jenis_reviewer || 'survei';
-
-                    if (data.skor_akurasi) {
-                        let akel = document.getElementById('ak' + data.skor_akurasi);
-                        if (akel) akel.checked = true;
-                    }
-                    if (data.rating) {
-                        let umel = document.getElementById('um' + data.rating);
-                        if (umel) umel.checked = true;
-                    }
-
-                    userType = data.jenis_reviewer || 'survei';
-                    // targetLat/Long tetap dari kost
-                    resetGPSUI();
-                    var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
-                    myModal.show();
-                    getLocation();
-                } else {
-                    alert('Ulasan tidak ditemukan atau bukan milik Anda.');
-                }
-            });
-    }
-
-    function resetGPSUI() {
-        document.getElementById('gpsContainer').className = 'alert alert-secondary small py-2 mb-3';
-        document.getElementById('gpsText').innerHTML = 'Mendeteksi lokasi...';
-        document.getElementById('jarakText').innerHTML = '';
-        document.getElementById('loadingGps').style.display = 'inline-block';
-        disableButton('Menunggu Lokasi...');
-    }
-
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(processPosition, showError, {
-                enableHighAccuracy: true
-            });
-        } else {
-            showError({
-                message: "Browser tidak support GPS"
-            });
-        }
-    }
-
-    function processPosition(position) {
-        let uLat = position.coords.latitude;
-        let uLong = position.coords.longitude;
-        document.getElementById('userLat').value = uLat;
-        document.getElementById('userLong').value = uLong;
-        let jarakMeter = hitungJarak(uLat, uLong, targetLat, targetLong);
-
-        let url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${uLat}&lon=${uLong}&zoom=18&addressdetails=1`;
-
-        fetch(url).then(r => r.json()).then(data => {
-            let alamatBersih = data.display_name || "Alamat tidak ditemukan";
-            let alamatShort = alamatBersih.split(',').slice(0, 3).join(',');
-            document.getElementById('gpsText').innerHTML = `<i class='bi bi-geo-alt-fill'></i> ${alamatShort}`;
-            document.getElementById('loadingGps').style.display = 'none';
-            validasiJarak(jarakMeter);
-        }).catch(err => {
-            document.getElementById('gpsText').innerHTML = "Lokasi: " + uLat.toFixed(5) + ", " + uLong.toFixed(5);
-            document.getElementById('loadingGps').style.display = 'none';
-            validasiJarak(jarakMeter);
-        });
-    }
-
-    function validasiJarak(meter) {
-        let statusBox = document.getElementById('gpsContainer');
-        let jarakText = document.getElementById('jarakText');
-
-        if (userType === 'sewa') {
-            statusBox.className = 'alert alert-success small py-2 mb-3';
-            jarakText.innerHTML = `Status: Penyewa (Bebas Review dari mana saja)`;
-            enableButton();
-        } else {
-            if (meter <= 30) {
-                statusBox.className = 'alert alert-success small py-2 mb-3';
-                jarakText.innerHTML = `Jarak: ${meter} meter (Dalam jangkauan)`;
-                enableButton();
-            } else {
-                statusBox.className = 'alert alert-danger small py-2 mb-3';
-                jarakText.innerHTML = `Kamu berada ${meter}m dari kost (penilaian hanya dapat dilakukan di area kost)`;
-                disableButton('Lokasi Terlalu Jauh');
-            }
-        }
-    }
-
-    function hitungJarak(lat1, lon1, lat2, lon2) {
-        if ((lat1 == lat2) && (lon1 == lon2)) return 0;
-        var radlat1 = Math.PI * lat1 / 180;
-        var radlat2 = Math.PI * lat2 / 180;
-        var theta = lon1 - lon2;
-        var radtheta = Math.PI * theta / 180;
-        var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
-        if (dist > 1) dist = 1;
-        dist = Math.acos(dist);
-        dist = dist * 180 / Math.PI;
-        dist = dist * 60 * 1.1515;
-        dist = dist * 1.609344 * 1000;
-        return Math.round(dist);
-    }
-
-    function enableButton() {
-        let btn = document.getElementById('btnKirimReview');
-        btn.disabled = false;
-        btn.innerHTML = isEditMode ? '<i class="bi bi-check-circle"></i> Update Ulasan' : '<i class="bi bi-send"></i> Kirim Ulasan';
-        btn.className = 'btn btn-primary w-100';
-    }
-
-    function disableButton(msg) {
-        let btn = document.getElementById('btnKirimReview');
-        btn.disabled = true;
-        btn.innerHTML = `<i class="bi bi-x-circle"></i> ${msg}`;
-        btn.className = 'btn btn-secondary w-100';
-    }
-
-    function showError(error) {
-        document.getElementById('gpsText').innerHTML = "Gagal ambil lokasi. Izinkan GPS!";
-        document.getElementById('loadingGps').style.display = 'none';
-        disableButton('GPS Error');
-    }
-
-    // Jika halaman dibuka dengan parameter edit_review, otomatis buka modal edit
-    <?php if (isset($_GET['edit_review'])): ?>
-        window.addEventListener('DOMContentLoaded', function() {
-            editReviewFromId(<?= (int)$_GET['edit_review'] ?>);
-        });
-    <?php elseif (isset($_GET['reviewer'])): // jika diarahkan untuk memberi ulasan (survei/sewa) buka modal baru 
-    ?>
-        window.addEventListener('DOMContentLoaded', function() {
-            // jika id_kamar diberikan lewat query string, isi juga
-            bukaModalReviewFromPage('<?= $id_kost ?>', '<?= addslashes($kost['nama_kost']) ?>', <?= $kost['latitude'] ?: 0 ?>, <?= $kost['longitude'] ?: 0 ?>, '<?= $_GET['reviewer'] ?>', '<?= isset($_GET['id_kamar']) ? (int)$_GET['id_kamar'] : '' ?>');
-        });
-    <?php endif; ?>
-</script>

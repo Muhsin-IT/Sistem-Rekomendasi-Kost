@@ -103,15 +103,13 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                                                 <a href="https://wa.me/<?= $s['no_hp'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i></a>
 
                                                 <?php if ($s['id_review']): ?>
-                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill"
-                                                        onclick="editReview('<?= $s['id_review'] ?>', '<?= $s['id_kost'] ?>', '<?= addslashes($s['nama_kost']) ?>', <?= $s['latitude'] ?>, <?= $s['longitude'] ?>, 'survei', <?= $s['skor_akurasi'] ?>, <?= $s['rating'] ?>)">
+                                                    <a href="detail_kost?id=<?= $s['id_kost'] ?>&edit_review=<?= $s['id_review'] ?>#ulasan" class="btn btn-sm btn-outline-warning rounded-pill">
                                                         <i class="bi bi-pencil"></i> Edit Ulasan
-                                                    </button>
+                                                    </a>
                                                 <?php else: ?>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
-                                                        onclick="bukaModalReview('<?= $s['id_kost'] ?>', '<?= addslashes($s['nama_kost']) ?>', <?= $s['latitude'] ?>, <?= $s['longitude'] ?>, 'survei')">
+                                                    <a href="detail_kost?id=<?= $s['id_kost'] ?>&reviewer=survei#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
                                                         <i class="bi bi-star"></i> Nilai Akurasi
-                                                    </button>
+                                                    </a>
                                                 <?php endif; ?>
 
                                             <?php elseif ($s['status'] == 'Menunggu'): ?>
@@ -164,15 +162,14 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                                                 <a href="https://wa.me/<?= $r['no_hp'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i></a>
 
                                                 <?php if ($r['id_review']): ?>
-                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill"
-                                                        onclick="editReview('<?= $r['id_review'] ?>', '<?= $r['id_kost'] ?>', '<?= addslashes($r['nama_kost']) ?>', <?= $r['latitude'] ?>, <?= $r['longitude'] ?>, 'sewa', <?= $r['skor_akurasi'] ?>, <?= $r['rating'] ?>)">
+                                                    <a href="detail_kost?id=<?= $r['id_kost'] ?>&edit_review=<?= $r['id_review'] ?>#ulasan" class="btn btn-sm btn-outline-warning rounded-pill">
                                                         <i class="bi bi-pencil"></i> Edit Ulasan
-                                                    </button>
+                                                    </a>
                                                 <?php else: ?>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
-                                                        onclick="bukaModalReview('<?= $r['id_kost'] ?>', '<?= addslashes($r['nama_kost']) ?>', <?= $r['latitude'] ?>, <?= $r['longitude'] ?>, 'sewa')">
+                                                    <!-- sertakan id_kamar agar saat diarahkan ke detail_kost id_kamar dapat terisi -->
+                                                    <a href="detail_kost?id=<?= $r['id_kost'] ?>&reviewer=sewa&id_kamar=<?= $r['id_kamar'] ?>#ulasan" class="btn btn-sm btn-outline-primary rounded-pill">
                                                         <i class="bi bi-star"></i> Beri Ulasan
-                                                    </button>
+                                                    </a>
                                                 <?php endif; ?>
 
                                             <?php elseif ($r['status'] == 'Menunggu'): ?>
@@ -190,230 +187,8 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
         </div>
     </div>
 
-    <div class="modal fade" id="modalReview" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fs-6"><span id="namaKostReview" class="fw-bold"></span></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST" action="proses_ulasan">
-                    <div class="modal-body">
-                        <input type="hidden" name="id_review" id="idReviewEdit" value="">
-                        <input type="hidden" name="id_kost" id="idKostReview">
-                        <input type="hidden" name="user_lat" id="userLat">
-                        <input type="hidden" name="user_long" id="userLong">
-                        <input type="hidden" name="jenis_reviewer" id="jenisReviewer">
-
-                        <div id="gpsContainer" class="alert alert-secondary small py-2 mb-3">
-                            <div class="d-flex align-items-center">
-                                <div class="spinner-border spinner-border-sm me-2" id="loadingGps" role="status"></div>
-                                <span id="gpsText">Mendeteksi lokasi & alamat...</span>
-                            </div>
-                            <div id="jarakText" class="fw-bold mt-1 text-primary" style="font-size: 0.9em;"></div>
-                        </div>
-
-                        <div class="mb-3 border-bottom pb-3">
-                            <label class="form-label fw-bold small">Akurasi Foto/Info (C5)</label>
-                            <div class="btn-group w-100" role="group">
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <input type="radio" class="btn-check" name="rating_akurasi" id="ak<?= $i ?>" value="<?= $i ?>" required>
-                                    <label class="btn btn-outline-warning" for="ak<?= $i ?>"><?= $i ?></label>
-                                <?php endfor; ?>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Kepuasan Umum (C6)</label>
-                            <div class="btn-group w-100" role="group">
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <input type="radio" class="btn-check" name="rating_umum" id="um<?= $i ?>" value="<?= $i ?>" required>
-                                    <label class="btn btn-outline-success" for="um<?= $i ?>"><?= $i ?></label>
-                                <?php endfor; ?>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <textarea name="komentar" id="komentarReview" class="form-control" rows="2" placeholder="Tulis pengalamanmu..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary w-100" id="btnKirimReview" disabled>
-                            <i class="bi bi-lock-fill"></i> Lokasi Belum Terverifikasi
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <?php include 'footer.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        let targetLat = 0;
-        let targetLong = 0;
-        let userType = '';
-        let isEditMode = false;
-
-        function bukaModalReview(id, nama, lat, long, type) {
-            isEditMode = false;
-            document.getElementById('idReviewEdit').value = '';
-            document.getElementById('idKostReview').value = id;
-            document.getElementById('namaKostReview').innerText = nama;
-            document.getElementById('jenisReviewer').value = type;
-            document.getElementById('komentarReview').value = '';
-
-            // Reset rating buttons
-            document.querySelectorAll('input[name="rating_akurasi"]').forEach(el => el.checked = false);
-            document.querySelectorAll('input[name="rating_umum"]').forEach(el => el.checked = false);
-
-            targetLat = lat;
-            targetLong = long;
-            userType = type;
-
-            resetGPSUI();
-            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
-            myModal.show();
-            getLocation();
-        }
-
-        function editReview(idReview, idKost, nama, lat, long, type, akurasi, rating) {
-            isEditMode = true;
-            document.getElementById('idReviewEdit').value = idReview;
-            document.getElementById('idKostReview').value = idKost;
-            document.getElementById('namaKostReview').innerText = nama + ' (Edit)';
-            document.getElementById('jenisReviewer').value = type;
-
-            // Set rating yang sudah ada
-            document.getElementById('ak' + akurasi).checked = true;
-            document.getElementById('um' + rating).checked = true;
-
-            // Ambil komentar existing via AJAX
-            fetch('get_review.php?id=' + idReview)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('komentarReview').value = data.komentar;
-                    }
-                });
-
-            targetLat = lat;
-            targetLong = long;
-            userType = type;
-
-            resetGPSUI();
-            var myModal = new bootstrap.Modal(document.getElementById('modalReview'));
-            myModal.show();
-            getLocation();
-        }
-
-        function resetGPSUI() {
-            document.getElementById('gpsContainer').className = 'alert alert-secondary small py-2 mb-3';
-            document.getElementById('gpsText').innerHTML = 'Mendeteksi lokasi...';
-            document.getElementById('jarakText').innerHTML = '';
-            document.getElementById('loadingGps').style.display = 'inline-block';
-            disableButton('Menunggu Lokasi...');
-        }
-
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(processPosition, showError, {
-                    enableHighAccuracy: true
-                });
-            } else {
-                showError({
-                    message: "Browser tidak support GPS"
-                });
-            }
-        }
-
-        function processPosition(position) {
-            let uLat = position.coords.latitude;
-            let uLong = position.coords.longitude;
-
-            document.getElementById('userLat').value = uLat;
-            document.getElementById('userLong').value = uLong;
-
-            let jarakMeter = hitungJarak(uLat, uLong, targetLat, targetLong);
-
-            let url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${uLat}&lon=${uLong}&zoom=18&addressdetails=1`;
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    let alamatBersih = data.display_name || "Alamat tidak ditemukan";
-                    let alamatShort = alamatBersih.split(',').slice(0, 3).join(',');
-
-                    document.getElementById('gpsText').innerHTML = `<i class='bi bi-geo-alt-fill'></i> ${alamatShort}`;
-                    document.getElementById('loadingGps').style.display = 'none';
-
-                    validasiJarak(jarakMeter);
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById('gpsText').innerHTML = "Lokasi: " + uLat.toFixed(5) + ", " + uLong.toFixed(5);
-                    document.getElementById('loadingGps').style.display = 'none';
-                    validasiJarak(jarakMeter);
-                });
-        }
-
-        function validasiJarak(meter) {
-            let statusBox = document.getElementById('gpsContainer');
-            let jarakText = document.getElementById('jarakText');
-
-            if (userType === 'sewa') {
-                statusBox.className = 'alert alert-success small py-2 mb-3';
-                jarakText.innerHTML = `Status: Penyewa (Bebas Review dari mana saja)`;
-                enableButton();
-            } else {
-                if (meter <= 30) {
-                    statusBox.className = 'alert alert-success small py-2 mb-3';
-                    jarakText.innerHTML = `Jarak: ${meter} meter (Dalam jangkauan)`;
-                    enableButton();
-                } else {
-                    statusBox.className = 'alert alert-danger small py-2 mb-3';
-                    jarakText.innerHTML = `Kamu berada ${meter}m dari kost (penilaian hanya dapat dilakukan di area kost)`;
-                    disableButton('Lokasi Terlalu Jauh');
-                }
-            }
-        }
-
-        function hitungJarak(lat1, lon1, lat2, lon2) {
-            if ((lat1 == lat2) && (lon1 == lon2)) return 0;
-            var radlat1 = Math.PI * lat1 / 180;
-            var radlat2 = Math.PI * lat2 / 180;
-            var theta = lon1 - lon2;
-            var radtheta = Math.PI * theta / 180;
-            var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
-            if (dist > 1) dist = 1;
-            dist = Math.acos(dist);
-            dist = dist * 180 / Math.PI;
-            dist = dist * 60 * 1.1515;
-            dist = dist * 1.609344 * 1000;
-            return Math.round(dist);
-        }
-
-        function enableButton() {
-            let btn = document.getElementById('btnKirimReview');
-            btn.disabled = false;
-            btn.innerHTML = isEditMode ? '<i class="bi bi-check-circle"></i> Update Ulasan' : '<i class="bi bi-send"></i> Kirim Ulasan';
-            btn.className = 'btn btn-primary w-100';
-        }
-
-        function disableButton(msg) {
-            let btn = document.getElementById('btnKirimReview');
-            btn.disabled = true;
-            btn.innerHTML = `<i class="bi bi-x-circle"></i> ${msg}`;
-            btn.className = 'btn btn-secondary w-100';
-        }
-
-        function showError(error) {
-            document.getElementById('gpsText').innerHTML = "Gagal ambil lokasi. Izinkan GPS!";
-            document.getElementById('loadingGps').style.display = 'none';
-            disableButton('GPS Error');
-        }
-    </script>
 </body>
 
 </html>
