@@ -180,6 +180,32 @@ if (count($all_reviews) > 0) {
     $ai_review_summary = json_decode($resp_rev, true);
     curl_close($ch_rev);
 }
+
+// ===============================================================
+// cek eligibility tombol Ulasan untuk user yang login
+$user_has_review = false;
+$user_has_sewa = false;
+$user_has_survei = false;
+$can_review = false;
+$default_reviewer = 'survei';
+
+if (isset($_SESSION['login'])) {
+	$id_user_check = $_SESSION['id_user'];
+	// sudah mengulas?
+	$qr = mysqli_query($conn, "SELECT id_review FROM review WHERE id_kost='$id_kost' AND id_user='$id_user_check' LIMIT 1");
+	$user_has_review = mysqli_num_rows($qr) > 0;
+
+	// pernah sewa (Diterima/Selesai)?
+	$qs = mysqli_query($conn, "SELECT id_pengajuan FROM pengajuan_sewa WHERE id_kost='$id_kost' AND id_user='$id_user_check' AND status IN ('Diterima','Selesai') LIMIT 1");
+	$user_has_sewa = mysqli_num_rows($qs) > 0;
+
+	// pernah survei (Diterima/Selesai)?
+	$qv = mysqli_query($conn, "SELECT id_survei FROM survei WHERE id_kost='$id_kost' AND id_user='$id_user_check' AND status IN ('Diterima','Selesai') LIMIT 1");
+	$user_has_survei = mysqli_num_rows($qv) > 0;
+
+	$can_review = (!$user_has_review) && ($user_has_sewa || $user_has_survei);
+	$default_reviewer = $user_has_sewa ? 'sewa' : ($user_has_survei ? 'survei' : 'survei');
+}
 ?>
 
 <!DOCTYPE html>
@@ -585,8 +611,11 @@ if (count($all_reviews) > 0) {
                 <div class="mt-5 mb-5">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold mb-0">Ulasan & Rating Akurasi</h4>
-                        <?php if (isset($_SESSION['login'])): ?>
-                            <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary" onclick="bukaModalReviewFromPage('<?= $id_kost ?>','<?= addslashes($kost['nama_kost']) ?>', <?= $kost['latitude'] ?: 0 ?>, <?= $kost['longitude'] ?: 0 ?>, 'survei')">Beri Ulasan</a>
+                        <?php if (isset($_SESSION['login']) && $can_review): ?>
+                            <a href="javascript:void(0)" class="btn btn-primary btn-lg fw-bold" 
+                               onclick="bukaModalReviewFromPage('<?= $id_kost ?>','<?= addslashes($kost['nama_kost']) ?>', <?= $kost['latitude'] ?: 0 ?>, <?= $kost['longitude'] ?: 0 ?>, '<?= $default_reviewer ?>')">
+                                <i class="bi bi-star-fill me-1"></i> Beri Ulasan
+                            </a>
                         <?php endif; ?>
                     </div>
 
