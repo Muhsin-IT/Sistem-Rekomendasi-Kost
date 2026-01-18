@@ -20,7 +20,7 @@ $komen          = isset($_POST['komentar']) ? $_POST['komentar'] : '';
 $komen          = mysqli_real_escape_string($conn, $komen);
 
 // redirect target ke halaman detail_kost bagian ulasan
-$redirect = "detail_kost?id_kost={$id_kost}#ulasan";
+$redirect = "detail_kost?id={$id_kost}#ulasan";
 
 // Jika ada id_review => edit
 if (!empty($_POST['id_review'])) {
