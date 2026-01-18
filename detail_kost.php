@@ -495,7 +495,7 @@ if (count($all_reviews) > 0) {
                             <div class="col-md-5 px-3">
                                 <h5 class="fw-bold mb-1"><?= $kmr['nama_tipe_kamar'] ?></h5>
                                 <p class="small text-muted mb-2"><?= $kmr['lebar_ruangan'] ?> • Listrik <?= $kmr['sudah_termasuk_listrik'] ? 'Incl.' : 'Excl.' ?></p>
-                                <a href="detail_kamar.php?id=<?= $kmr['id_kamar'] ?>" class="btn btn-outline-primary btn-sm rounded-pill stretched-link">
+                                <a href="detail_kamar?id=<?= $kmr['id_kamar'] ?>" class="btn btn-outline-primary btn-sm rounded-pill stretched-link">
                                     Lihat Detail Kamar
                                 </a>
                             </div>
@@ -1518,7 +1518,7 @@ out center;
         document.getElementById('namaKostReview').innerText = "<?= addslashes($kost['nama_kost']) ?> (Edit)";
 
         // Ambil data lewat AJAX
-        fetch('get_review.php?id=' + idReview)
+        fetch('get_review?id=' + idReview)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
