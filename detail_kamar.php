@@ -49,6 +49,29 @@ while ($r = mysqli_fetch_assoc($q_pk)) $peraturan_kamar[] = $r['nama_peraturan']
 $peraturan_kost = [];
 $q_pg = mysqli_query($conn, "SELECT mp.nama_peraturan FROM rel_peraturan rp JOIN master_peraturan mp ON rp.id_master_peraturan=mp.id_master_peraturan WHERE rp.id_kost='$id_kost' AND rp.id_kamar IS NULL");
 while ($r = mysqli_fetch_assoc($q_pg)) $peraturan_kost[] = $r['nama_peraturan'];
+
+// 5. REVIEW & RATING (KHUSUS KAMAR INI)
+$q_review = mysqli_query($conn, "SELECT r.*, u.nama_lengkap FROM review r 
+    JOIN users u ON r.id_user = u.id_user 
+    WHERE r.id_kamar='$id_kamar' ORDER BY r.tanggal_review DESC");
+
+$total_review = mysqli_num_rows($q_review);
+$avg_rating   = 0;
+$avg_akurasi  = 0;
+
+$list_review = [];
+if ($total_review > 0) {
+    $sum_rating  = 0;
+    $sum_akurasi = 0;
+    while ($r = mysqli_fetch_assoc($q_review)) {
+        $sum_rating  += (int)$r['rating'];
+        $sum_akurasi += (int)$r['skor_akurasi'];
+        $list_review[] = $r;
+    }
+    $avg_rating  = round($sum_rating / $total_review, 1);
+    $avg_akurasi = round($sum_akurasi / $total_review, 1);
+}
+
 // login status
 $is_logged_in = isset($_SESSION['login']);
 
@@ -250,6 +273,43 @@ if ($is_logged_in) {
             opacity: 0.35;
             cursor: not-allowed;
         }
+
+        /* Review Styles */
+        .rating-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            text-align: center;
+        }
+
+        .rating-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+            line-height: 1;
+        }
+
+        .review-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 15px 0;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+        .avatar-review {
+            width: 40px;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #0d6efd;
+        }
     </style>
 </head>
 
@@ -371,6 +431,76 @@ if ($is_logged_in) {
                         </div>
                     </div>
                 </div>
+
+                <!-- SECTION REVIEW & RATING -->
+                <?php if ($total_review > 0): ?>
+                    <div class="card card-custom p-4 mt-4">
+                        <h5 class="fw-bold mb-3">Ulasan & Rating Kamar</h5>
+
+                        <!-- Rating Summary -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <div class="rating-box text-center">
+                                    <div class="rating-number"><?= $avg_rating ?></div>
+                                    <div class="text-warning mb-1">
+                                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                                            <i class="bi bi-star-fill<?= $i <= floor($avg_rating) ? '' : ($i - $avg_rating < 1 ? '-half' : ' text-muted') ?>"></i>
+                                        <?php endfor; ?>
+                                    </div>
+                                    <small class="text-muted">Rating Umum</small>
+                                    <div class="mt-2 small text-muted"><?= $total_review ?> ulasan</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="rating-box text-center">
+                                    <div class="rating-number text-warning"><?= $avg_akurasi ?></div>
+                                    <div class="text-warning mb-1">
+                                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                                            <i class="bi bi-star-fill<?= $i <= floor($avg_akurasi) ? '' : ($i - $avg_akurasi < 1 ? '-half' : ' text-muted') ?>"></i>
+                                        <?php endfor; ?>
+                                    </div>
+                                    <small class="text-muted">Akurasi Info</small>
+                                    <div class="mt-2 small text-muted"><?= $total_review ?> ulasan</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- List Review -->
+                        <h6 class="fw-bold mb-3">Semua Ulasan</h6>
+                        <div class="review-list">
+                            <?php foreach ($list_review as $review): ?>
+                                <div class="review-item">
+                                    <div class="d-flex gap-3">
+                                        <div class="avatar-review">
+                                            <?= strtoupper(substr($review['nama_lengkap'], 0, 1)) ?>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold"><?= htmlspecialchars($review['nama_lengkap']) ?></h6>
+                                                    <small class="text-muted"><?= date('d M Y', strtotime($review['tanggal_review'])) ?></small>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-2">
+                                                <span class="badge bg-success me-2">
+                                                    <i class="bi bi-star-fill"></i> <?= $review['rating'] ?>/5 Rating
+                                                </span>
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-check-circle-fill"></i> <?= $review['skor_akurasi'] ?>/5 Akurasi
+                                                </span>
+                                            </div>
+
+                                            <?php if ($review['komentar']): ?>
+                                                <p class="mb-0 text-secondary"><?= nl2br(htmlspecialchars($review['komentar'])) ?></p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="col-lg-4 d-none d-lg-block">
