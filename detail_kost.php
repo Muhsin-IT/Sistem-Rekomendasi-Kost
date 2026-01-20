@@ -186,7 +186,7 @@ if (count($all_reviews) > 0) {
 $user_has_review = false;
 $user_has_sewa = false;
 $user_has_survei = false;
-$can_review = false;
+$can_review = false; // ulasan baru dipindah ke detail_kamar
 $default_reviewer = 'survei';
 
 if (isset($_SESSION['login'])) {
@@ -626,12 +626,7 @@ if (isset($_SESSION['login'])) {
                 <div class="mt-5 mb-5">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold mb-0">Ulasan & Rating Akurasi</h4>
-                        <?php if (isset($_SESSION['login']) && $can_review): ?>
-                            <a href="javascript:void(0)" class="btn btn-primary btn-lg fw-bold"
-                                onclick="bukaModalReviewFromPage('<?= $id_kost ?>','<?= addslashes($kost['nama_kost']) ?>', <?= $kost['latitude'] ?: 0 ?>, <?= $kost['longitude'] ?: 0 ?>, '<?= $default_reviewer ?>')">
-                                <i class="bi bi-star-fill me-1"></i> Beri Ulasan
-                            </a>
-                        <?php endif; ?>
+                        <small class="text-muted">Untuk memberi ulasan baru, buka detail kamar yang Anda pesan.</small>
                     </div>
 
                     <?php if (isset($ai_review_summary['status']) && $ai_review_summary['status'] == 'success'): ?>
@@ -756,8 +751,8 @@ if (isset($_SESSION['login'])) {
                                             <i class="bi bi-shield-check text-primary"></i> Akurasi: <strong><?= $rev['skor_akurasi'] ?>/5</strong>
                                         </small>
 
-                                        <!-- Jika review sudah pernah diupdate tampilkan dari kamar apa -->
-                                        <?php if (!is_null($rev['updated_at']) && !empty($rev['nama_tipe_kamar'])): ?>
+                                        <!-- Selalu tampilkan asal kamar jika tersedia -->
+                                        <?php if (!empty($rev['nama_tipe_kamar'])): ?>
                                             <small class="text-muted" style="font-size:0.75rem;">
                                                 <i class="bi bi-door-open"></i> Dari kamar: <strong><?= htmlspecialchars($rev['nama_tipe_kamar']) ?></strong>
                                             </small>
@@ -1764,12 +1759,6 @@ out center;
     <?php if (isset($_GET['edit_review'])): ?>
         window.addEventListener('DOMContentLoaded', function() {
             editReviewFromId(<?= (int)$_GET['edit_review'] ?>);
-        });
-    <?php elseif (isset($_GET['reviewer'])): // jika diarahkan untuk memberi ulasan (survei/sewa) buka modal baru 
-    ?>
-        window.addEventListener('DOMContentLoaded', function() {
-            // jika id_kamar diberikan lewat query string, isi juga
-            bukaModalReviewFromPage('<?= $id_kost ?>', '<?= addslashes($kost['nama_kost']) ?>', <?= $kost['latitude'] ?: 0 ?>, <?= $kost['longitude'] ?: 0 ?>, '<?= $_GET['reviewer'] ?>', '<?= isset($_GET['id_kamar']) ? (int)$_GET['id_kamar'] : '' ?>');
         });
     <?php endif; ?>
 </script>

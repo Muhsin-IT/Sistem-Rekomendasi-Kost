@@ -9,7 +9,7 @@ if (!isset($_GET['id'])) {
 $id_kamar = $_GET['id'];
 
 // 1. DATA KAMAR
-$query = "SELECT km.*, k.id_kost, k.nama_kost, k.alamat, u.nama_lengkap as nama_pemilik, u.no_hp as hp_pemilik 
+$query = "SELECT km.*, k.id_kost, k.nama_kost, k.alamat, k.latitude, k.longitude, u.nama_lengkap as nama_pemilik, u.no_hp as hp_pemilik 
           FROM kamar km 
           JOIN kost k ON km.id_kost = k.id_kost 
           JOIN users u ON k.id_pemilik = u.id_user 
@@ -97,6 +97,25 @@ if ($is_logged_in) {
     $btn_action_sewa = "login?next=" . $current_page;
 
     $target_blank = ''; // Kosongkan variabel
+}
+
+// Eligibility review khusus kamar
+$user_has_review = $user_has_sewa = $user_has_survei = $can_review = false;
+$default_reviewer = 'survei';
+if ($is_logged_in) {
+    $id_user_check = $_SESSION['id_user'];
+    $qr = mysqli_query($conn, "SELECT id_review FROM review WHERE id_kamar='$id_kamar' AND id_user='$id_user_check' LIMIT 1");
+    $user_has_review = mysqli_num_rows($qr) > 0;
+
+    $qs = mysqli_query($conn, "SELECT id_pengajuan FROM pengajuan_sewa WHERE id_kamar='$id_kamar' AND id_user='$id_user_check' AND status IN ('Diterima','Selesai') LIMIT 1");
+    $user_has_sewa = mysqli_num_rows($qs) > 0;
+
+    // Survei hanya memiliki id_kost, tidak ada id_kamar
+    $qv = mysqli_query($conn, "SELECT id_survei FROM survei WHERE id_kost='$id_kost' AND id_user='$id_user_check' AND status IN ('Diterima','Selesai') LIMIT 1");
+    $user_has_survei = mysqli_num_rows($qv) > 0;
+
+    $can_review = (!$user_has_review) && ($user_has_sewa || $user_has_survei);
+    $default_reviewer = $user_has_sewa ? 'sewa' : ($user_has_survei ? 'survei' : 'survei');
 }
 ?>
 
@@ -433,9 +452,16 @@ if ($is_logged_in) {
                 </div>
 
                 <!-- SECTION REVIEW & RATING -->
-                <?php if ($total_review > 0): ?>
-                    <div class="card card-custom p-4 mt-4">
-                        <h5 class="fw-bold mb-3">Ulasan & Rating Kamar</h5>
+                <?php if ($total_review > 0 || $can_review): ?>
+                    <div class="card card-custom p-4 mt-4" id="ulasan">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Ulasan & Rating Kamar</h5>
+                            <?php if ($is_logged_in && $can_review): ?>
+                                <button class="btn btn-primary btn-sm fw-bold" onclick="bukaModalReviewKamar('<?= $default_reviewer ?>')">
+                                    <i class="bi bi-star-fill me-1"></i> Beri Ulasan
+                                </button>
+                            <?php endif; ?>
+                        </div>
 
                         <!-- Rating Summary -->
                         <div class="row mb-4">
@@ -493,6 +519,11 @@ if ($is_logged_in) {
 
                                             <?php if ($review['komentar']): ?>
                                                 <p class="mb-0 text-secondary"><?= nl2br(htmlspecialchars($review['komentar'])) ?></p>
+                                            <?php endif; ?>
+                                            <?php if ($is_logged_in && $_SESSION['id_user'] == $review['id_user']): ?>
+                                                <div class="mt-2">
+                                                    <a href="detail_kamar?id=<?= $id_kamar ?>&edit_review=<?= $review['id_review'] ?>#ulasan" class="btn btn-sm btn-outline-warning rounded-pill">Edit</a>
+                                                </div>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -728,6 +759,65 @@ if ($is_logged_in) {
         </div>
     </div>
 
+    <!-- Modal Review Kamar -->
+    <div class="modal fade" id="modalReviewKamar" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6"><span id="namaKostReview" class="fw-bold"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="proses_ulasan">
+                    <div class="modal-body">
+                        <input type="hidden" name="id_review" id="idReviewEdit" value="">
+                        <input type="hidden" name="id_kost" id="idKostReview" value="<?= $id_kost ?>">
+                        <input type="hidden" name="id_kamar" id="idKamarReview" value="<?= $id_kamar ?>">
+                        <input type="hidden" name="user_lat" id="userLat">
+                        <input type="hidden" name="user_long" id="userLong">
+                        <input type="hidden" name="jenis_reviewer" id="jenisReviewer">
+
+                        <div id="gpsContainer" class="alert alert-secondary small py-2 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" id="loadingGps" role="status"></div>
+                                <span id="gpsText">Mendeteksi lokasi & alamat...</span>
+                            </div>
+                            <div id="jarakText" class="fw-bold mt-1 text-primary" style="font-size: 0.9em;"></div>
+                        </div>
+
+                        <div class="mb-3 border-bottom pb-3">
+                            <label class="form-label fw-bold small">Akurasi Foto/Info</label>
+                            <div class="stars akurasi" role="radiogroup" aria-label="Akurasi">
+                                <?php for ($i = 5; $i >= 1; $i--): ?>
+                                    <input type="radio" name="rating_akurasi" id="ak<?= $i ?>" value="<?= $i ?>" required>
+                                    <label for="ak<?= $i ?>"><i class="bi bi-star-fill"></i></label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Kepuasan Umum</label>
+                            <div class="stars umum" role="radiogroup" aria-label="Kepuasan Umum">
+                                <?php for ($i = 5; $i >= 1; $i--): ?>
+                                    <input type="radio" name="rating_umum" id="um<?= $i ?>" value="<?= $i ?>" required>
+                                    <label for="um<?= $i ?>"><i class="bi bi-star-fill"></i></label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <textarea name="komentar" id="komentarReview" class="form-control" rows="2" placeholder="Tulis pengalamanmu..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary w-100" id="btnKirimReview" disabled>
+                            <i class="bi bi-lock-fill"></i> Lokasi Belum Terverifikasi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var modalFsEl = document.getElementById('modalFullscreen');
@@ -921,6 +1011,175 @@ if ($is_logged_in) {
                 }
             });
         }
+
+        // Review modal handlers khusus kamar
+        let targetLat = <?= $kamar['latitude'] ?: 0 ?>;
+        let targetLong = <?= $kamar['longitude'] ?: 0 ?>;
+        let userType = '';
+        let isEditMode = false;
+
+        function bukaModalReviewKamar(type = 'survei') {
+            isEditMode = false;
+            document.getElementById('idReviewEdit').value = '';
+            document.getElementById('idKostReview').value = '<?= $id_kost ?>';
+            document.getElementById('idKamarReview').value = '<?= $id_kamar ?>';
+            document.getElementById('namaKostReview').innerText = "<?= addslashes($kamar['nama_kost']) ?>";
+            document.getElementById('jenisReviewer').value = type;
+            document.getElementById('komentarReview').value = '';
+            document.querySelectorAll('input[name="rating_akurasi"]').forEach(el => el.checked = false);
+            document.querySelectorAll('input[name="rating_umum"]').forEach(el => el.checked = false);
+
+            userType = type;
+            resetGPSUI();
+            var myModal = new bootstrap.Modal(document.getElementById('modalReviewKamar'));
+            myModal.show();
+
+            if (userType === 'sewa') {
+                document.getElementById('loadingGps').style.display = 'none';
+                document.getElementById('gpsText').innerHTML = "<i class='bi bi-house-fill'></i> Penyewa — verifikasi lokasi tidak diperlukan";
+                document.getElementById('jarakText').innerHTML = "Status: Penyewa (Tidak perlu verifikasi lokasi)";
+                enableButton();
+            } else {
+                getLocation();
+            }
+        }
+
+        function editReviewFromId(idReview) {
+            isEditMode = true;
+            document.getElementById('idReviewEdit').value = idReview;
+            document.getElementById('idKostReview').value = '<?= $id_kost ?>';
+            document.getElementById('idKamarReview').value = '<?= $id_kamar ?>';
+            document.getElementById('namaKostReview').innerText = "<?= addslashes($kamar['nama_kost']) ?> (Edit)";
+
+            fetch('get_review?id=' + idReview)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('komentarReview').value = data.komentar || '';
+                        document.getElementById('jenisReviewer').value = data.jenis_reviewer || 'survei';
+
+                        if (data.skor_akurasi) {
+                            const akel = document.getElementById('ak' + data.skor_akurasi);
+                            if (akel) akel.checked = true;
+                        }
+                        if (data.rating) {
+                            const umel = document.getElementById('um' + data.rating);
+                            if (umel) umel.checked = true;
+                        }
+
+                        userType = data.jenis_reviewer || 'survei';
+                        var myModal = new bootstrap.Modal(document.getElementById('modalReviewKamar'));
+                        myModal.show();
+
+                        if (isEditMode || userType === 'sewa') {
+                            document.getElementById('loadingGps').style.display = 'none';
+                            document.getElementById('gpsText').innerHTML = "<i class='bi bi-pencil-square'></i> Edit — verifikasi lokasi tidak diperlukan";
+                            document.getElementById('jarakText').innerHTML = "Edit mode (Tidak perlu verifikasi lokasi)";
+                            enableButton();
+                        } else {
+                            resetGPSUI();
+                            getLocation();
+                        }
+                    } else {
+                        alert('Ulasan tidak ditemukan atau bukan milik Anda.');
+                    }
+                });
+        }
+
+        // GPS & Review
+        function getLocation() {
+            if (!navigator.geolocation) {
+                showError('Browser ini tidak mendukung geolokasi.');
+                return;
+            }
+            document.getElementById('loadingGps').style.display = 'flex';
+
+            navigator.geolocation.getCurrentPosition(processPosition, function(err) {
+                document.getElementById('loadingGps').style.display = 'none';
+                if (err.code === err.PERMISSION_DENIED) {
+                    showError('Izin akses lokasi ditolak. Aktifkan izin lokasi untuk menggunakan fitur ini.');
+                } else {
+                    showError('Gagal mendapatkan lokasi Anda. Error: ' + err.message);
+                }
+            }, {
+                enableHighAccuracy: true
+            });
+        }
+
+        function processPosition(position) {
+            document.getElementById('loadingGps').style.display = 'none';
+            const lat = position.coords.latitude;
+            const long = position.coords.longitude;
+
+            document.getElementById('userLat').value = lat;
+            document.getElementById('userLong').value = long;
+
+            const jarak = hitungJarak(lat, long, targetLat, targetLong);
+            const jarakKm = (jarak / 1000).toFixed(2);
+            document.getElementById('jarakText').innerHTML = "Jarak Anda: " + jarakKm + " km dari lokasi kamar";
+
+            if (validasiJarak(jarak)) {
+                enableButton();
+            } else {
+                disableButton();
+            }
+        }
+
+        function validasiJarak(jarak) {
+            return jarak <= 100; // Maksimal 100 meter
+        }
+
+        function hitungJarak(lat1, long1, lat2, long2) {
+            const toRad = (value) => (value * Math.PI) / 180;
+            const R = 6371e3; // Radius Bumi dalam meter
+            const φ1 = toRad(lat1);
+            const φ2 = toRad(lat2);
+            const Δφ = toRad(lat2 - lat1);
+            const Δλ = toRad(long2 - long1);
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c; // Dalam meter
+        }
+
+        function resetGPSUI() {
+            document.getElementById('loadingGps').style.display = 'none';
+            document.getElementById('gpsText').innerHTML = "<i class='bi bi-geo'></i> Verifikasi lokasi Anda untuk memberikan ulasan";
+            document.getElementById('jarakText').innerHTML = "Status: Belum diverifikasi";
+            disableButton();
+        }
+
+        function enableButton() {
+            document.getElementById('btnKirimReview').disabled = false;
+            document.getElementById('btnKirimReview').innerHTML = "<i class='bi bi-send'></i> Kirim Ulasan";
+        }
+
+        function disableButton() {
+            document.getElementById('btnKirimReview').disabled = true;
+            document.getElementById('btnKirimReview').innerHTML = "<i class='bi bi-lock-fill'></i> Lokasi Belum Terverifikasi";
+        }
+
+        function showError(message) {
+            document.getElementById('gpsText').innerHTML = "<i class='bi bi-exclamation-circle'></i> " + message;
+            document.getElementById('loadingGps').style.display = 'none';
+        }
+
+        // Auto open review modal if edit_review param exists
+        <?php if (isset($_GET['edit_review'])): ?>
+            window.addEventListener('DOMContentLoaded', function() {
+                editReviewFromId(<?= (int)$_GET['edit_review'] ?>);
+            });
+        <?php endif; ?>
+
+        // Auto open via ?reviewer=survei|sewa&optional id_kamar (pakai kamar ini)
+        <?php if (isset($_GET['reviewer'])): ?>
+            window.addEventListener('DOMContentLoaded', function() {
+                bukaModalReviewKamar('<?= $_GET['reviewer'] === 'sewa' ? 'sewa' : 'survei' ?>');
+            });
+        <?php endif; ?>
     </script>
     <?php include 'footer.php'; ?>
 </body>

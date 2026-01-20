@@ -19,8 +19,8 @@ $jenis_reviewer = isset($_POST['jenis_reviewer']) ? $_POST['jenis_reviewer'] : n
 $komen          = isset($_POST['komentar']) ? $_POST['komentar'] : '';
 $komen          = mysqli_real_escape_string($conn, $komen);
 
-// redirect target ke halaman detail_kost bagian ulasan
-$redirect = "detail_kost?id={$id_kost}#ulasan";
+// redirect target: ke kamar jika ada, otherwise ke kost
+$redirect = $id_kamar ? "detail_kamar?id={$id_kamar}#ulasan" : "detail_kost?id={$id_kost}#ulasan";
 
 // Jika ada id_review => edit
 if (!empty($_POST['id_review'])) {
@@ -55,9 +55,14 @@ if (!empty($_POST['id_review'])) {
     }
 }
 
-// Create baru: cek duplikat (user+kost)
-$cek = mysqli_prepare($conn, "SELECT id_review FROM review WHERE id_user = ? AND id_kost = ?");
-mysqli_stmt_bind_param($cek, "ii", $id_user, $id_kost);
+// Create baru: cek duplikat
+if ($id_kamar > 0) {
+    $cek = mysqli_prepare($conn, "SELECT id_review FROM review WHERE id_user = ? AND id_kamar = ?");
+    mysqli_stmt_bind_param($cek, "ii", $id_user, $id_kamar);
+} else {
+    $cek = mysqli_prepare($conn, "SELECT id_review FROM review WHERE id_user = ? AND id_kost = ?");
+    mysqli_stmt_bind_param($cek, "ii", $id_user, $id_kost);
+}
 mysqli_stmt_execute($cek);
 mysqli_stmt_store_result($cek);
 $dup_count = mysqli_stmt_num_rows($cek);
