@@ -850,9 +850,9 @@ if (isset($_SESSION['login'])) {
     <div class="modal fade" id="modalFullscreen" tabindex="-1">
         <div class="modal-dialog modal-fullscreen bg-dark">
             <div class="modal-content bg-dark border-0">
-                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-4 z-3" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white position-absolute top- end-0 m-4 z-3" data-bs-dismiss="modal"></button>
 
-                <div class="modal-body p-0">
+                <div class="modal-body p-0 mt-6">
                     <div id="fsCarousel" class="carousel slide h-100 w-100" data-bs-interval="false">
                         <div class="carousel-inner h-100 w-100">
                             <?php foreach ($galeri_biasa as $idx => $g): ?>

@@ -166,7 +166,8 @@ session_start();
     <div class="container mb-5">
         <div class="row align-items-center g-5">
             <div class="col-lg-6 fade-in-up delay-1">
-                <img src="https://img.freepik.com/free-vector/house-searching-concept-illustration_114360-466.jpg" alt="Ilustrasi Cari Kost" class="img-fluid rounded-4 shadow-sm">
+                <img src="unu2.png" alt="Ilustrasi Cari Kost" class="img-fluid rounded-4 shadow-sm">
+                <!-- <img src="https://img.freepik.com/free-vector/house-searching-concept-illustration_114360-466.jpg" alt="Ilustrasi Cari Kost" class="img-fluid rounded-4 shadow-sm"> -->
             </div>
             <div class="col-lg-6 fade-in-up delay-1">
                 <h6 class="text-primary fw-bold text-uppercase ls-1">Kenapa Kami Ada?</h6>

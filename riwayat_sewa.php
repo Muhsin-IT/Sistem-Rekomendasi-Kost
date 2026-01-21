@@ -87,7 +87,8 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                             if (mysqli_num_rows($q_survei) > 0):
                                 while ($s = mysqli_fetch_assoc($q_survei)):
                             ?>
-                                    <tr>
+                                    <!-- Tambahkan onclick di baris ini untuk tabel Survei -->
+                                    <tr style="cursor: pointer;" onclick="if(!event.target.closest('a')) window.location='detail_kost?id=<?= $s['id_kost'] ?>'">
                                         <td class="ps-4">
                                             <span class="fw-bold d-block"><?= $s['nama_kost'] ?></span>
                                             <small class="text-muted"><?= substr($s['alamat'], 0, 30) ?>...</small>
@@ -100,8 +101,6 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                                         </td>
                                         <td class="text-end pe-4">
                                             <?php if ($s['status'] == 'Diterima' || $s['status'] == 'Selesai'): ?>
-                                                <a href="https://wa.me/<?= $s['no_hp'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i></a>
-
                                                 <?php if ($s['id_review']): ?>
                                                     <a href="detail_kost?id=<?= $s['id_kost'] ?>&edit_review=<?= $s['id_review'] ?>#ulasan" class="btn btn-sm btn-outline-warning rounded-pill">
                                                         <i class="bi bi-pencil"></i> Edit Ulasan
@@ -164,14 +163,17 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'edit_review' && isset($_GET['id'])
                             if (mysqli_num_rows($q_sewa) > 0):
                                 while ($r = mysqli_fetch_assoc($q_sewa)):
                             ?>
-                                    <tr>
-                                        <td class="ps-4"><span class="fw-bold"><?= $r['nama_kost'] ?></span></td>
+                                    <!-- Tambahkan onclick di baris ini untuk tabel Sewa -->
+                                    <tr style="cursor: pointer;" onclick="if(!event.target.closest('a')) window.location='detail_kamar.php?id=<?= $r['id_kamar'] ?>'">
+                                        <td class="ps-4">
+                                            <a href="detail_sewa.php?id=<?= $r['id_pengajuan'] ?>" class="text-decoration-none text-dark fw-bold hover-primary">
+                                                <?= $r['nama_kost'] ?> <i class="bi bi-box-arrow-up-right ms-1 text-muted small"></i>
+                                            </a>
+                                        </td>
                                         <td><?= date('d M Y', strtotime($r['tanggal_mulai_kos'])) ?></td>
                                         <td><span class="badge <?= $r['status'] == 'Diterima' ? 'bg-success' : 'bg-warning text-dark' ?>"><?= $r['status'] ?></span></td>
                                         <td class="text-end pe-4">
                                             <?php if ($r['status'] == 'Diterima'): ?>
-                                                <a href="https://wa.me/<?= $r['no_hp'] ?>" target="_blank" class="btn btn-sm btn-success rounded-pill"><i class="bi bi-whatsapp"></i></a>
-
                                                 <?php if ($r['id_review']): ?>
                                                     <a href="detail_kost?id=<?= $r['id_kost'] ?>&edit_review=<?= $r['id_review'] ?>#ulasan" class="btn btn-sm btn-outline-warning rounded-pill">
                                                         <i class="bi bi-pencil"></i> Edit Ulasan

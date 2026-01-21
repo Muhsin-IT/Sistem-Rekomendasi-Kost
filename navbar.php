@@ -78,7 +78,8 @@ $isProfilPage = strpos($currentPage, 'profil') !== false;
             left: 0;
             right: 0;
             display: flex;
-            z-index: 1030;
+            z-index: 99999 !important;
+            /* Diubah agar selalu paling atas */
         }
     }
 </style>
@@ -130,7 +131,7 @@ $isProfilPage = strpos($currentPage, 'profil') !== false;
     </div>
 </nav>
 
-<div class="bottom-nav d-lg-none">
+<div class="bottom-nav sticky-bottom d-lg-none">
     <a href="index" class="<?= $currentPage === 'index.php' ? 'active' : '' ?>">
         <i class="bi bi-house-door-fill"></i>
         <small>Beranda</small>

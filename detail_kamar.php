@@ -329,6 +329,76 @@ if ($is_logged_in) {
             font-weight: bold;
             color: #0d6efd;
         }
+
+        /* ========================= STAR RATING (sama dengan detail_kost.php) ========================= */
+        /* star-rating styles (Shopee-like: click star n fills 1..n from left) */
+        .stars {
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .stars input {
+            display: none;
+        }
+
+        /* make each star label fill available width and show large star icon */
+        .stars label {
+            cursor: pointer;
+            flex: 1 1 0;
+            text-align: center;
+            padding: 8px 4px;
+            font-size: 2rem;
+            /* larger clickable area */
+            color: #d1d5db;
+            /* inactive gray */
+            transition: color .12s ease-in-out, transform .08s;
+            line-height: 1;
+        }
+
+        .stars label .bi {
+            font-size: 1.8rem;
+            /* icon size */
+            vertical-align: middle;
+            display: inline-block;
+        }
+
+        /* hover effect */
+        .stars label:hover,
+        .stars label:hover~label {
+            transform: scale(1.05);
+        }
+
+        /* akurasi = gold (checked and hover affect labels to the left visually) */
+        .stars.akurasi input:checked~label,
+        .stars.akurasi label:hover,
+        .stars.akurasi label:hover~label {
+            color: #ffc107;
+            /* gold */
+        }
+
+        /* umum = green */
+        .stars.umum input:checked~label,
+        .stars.umum label:hover,
+        .stars.umum label:hover~label {
+            color: #198754;
+            /* bootstrap-success */
+        }
+
+        /* ensure contrast for checked state on small screens */
+        @media (max-width: 480px) {
+            .stars label {
+                font-size: 1.6rem;
+                padding: 6px 2px;
+            }
+
+            .stars label .bi {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* ============================================================================================ */
     </style>
 </head>
 
@@ -729,7 +799,8 @@ if ($is_logged_in) {
         </div>
     </div>
 
-    <div class="d-block d-lg-none fixed-bottom bg-white border-top p-3 shadow">
+    <!-- Perubahan: Menambahkan style="bottom: 75px;" agar posisinya berada di atas navbar bawah -->
+    <div class="d-block d-lg-none fixed-bottom bg-white border-top p-3 shadow" style="bottom: 64px; z-index: 1020;">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <small class="text-muted d-block">Harga per bulan</small>
