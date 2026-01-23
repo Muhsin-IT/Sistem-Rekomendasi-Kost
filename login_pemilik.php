@@ -1,4 +1,14 @@
 <?php
+// GANTI session_start(); DENGAN KONFIGURASI SESSION DENGAN LIFETIME 30 HARI
+$lifetime = 30 * 24 * 60 * 60; // 30 hari dalam detik
+ini_set('session.gc_maxlifetime', $lifetime);
+session_set_cookie_params([
+    'lifetime' => $lifetime,
+    'path' => '/',
+    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 session_start();
 include 'koneksi.php';
 
