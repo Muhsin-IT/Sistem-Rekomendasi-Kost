@@ -502,6 +502,9 @@ if (mysqli_num_rows($result) > 0) {
         const latUNU = <?= $lat_unu ?>;
         const longUNU = <?= $long_unu ?>;
 
+        // debug
+        file_put_contents('debug_playload_saw.json', $payload);
+
         // SETUP PETA
         const map = L.map('map', {
             zoomControl: false
