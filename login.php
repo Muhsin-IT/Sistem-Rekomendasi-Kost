@@ -103,7 +103,7 @@ if (isset($_POST['login'])) {
     <style>
         body {
             /* 1. BACKGROUND IMAGE */
-            background-image: url('assets/img/logo/bg-hero-wide.webp');
+            background-image: url('https://unu-jogja.ac.id/img/Landing/Hero/bg-hero-wide.webp');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -129,37 +129,27 @@ if (isset($_POST['login'])) {
             z-index: -1;
         }
 
-        /* 3. SETTING TRANSPARANSI KARTU LOGIN (GLASSMORPHISM) */
+
         .card-login {
-            /* Border tipis transparan */
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            /* Bayangan lebih kuat */
-
-            /* -- BAGIAN KUNCI TRANSPARANSI -- */
-            /* Putih dengan transparansi 45% (Sangat Bening) */
             background: rgba(255, 255, 255, 0.05);
-
-            /* Blur diperkuat agar teks tetap terbaca di atas background ramai */
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
         }
 
         .text-login-title {
             color: #fff;
-            /* Judul jadi Putih agar kontras */
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .text-login-desc {
             color: rgba(255, 255, 255, 0.8) !important;
-            /* Deskripsi agak putih pudar */
         }
 
         .label-custom {
             color: #fff;
-            /* Label form jadi putih */
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
             font-weight: 600;
         }
@@ -183,7 +173,6 @@ if (isset($_POST['login'])) {
         .form-control {
             border-radius: 10px;
             padding: 12px;
-            /* Input field dibuat agak putih solid supaya user tau dimana ngetik */
             background-color: rgba(255, 255, 255, 0.9);
             border: none;
         }
