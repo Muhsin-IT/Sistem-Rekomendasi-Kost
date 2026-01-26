@@ -64,12 +64,12 @@ if ($filter == 'ai') {
     // 2. Kirim ke Python API
     $api_url = "http://127.0.0.1:5001/hitung-saw";
     $kriteria = [
-        "C1" => ["atribut" => "cost", "bobot" => 0.25],
-        "C2" => ["atribut" => "cost", "bobot" => 0.15],
-        "C3" => ["atribut" => "benefit", "bobot" => 0.20],
-        "C4" => ["atribut" => "benefit", "bobot" => 0.10],
-        "C5" => ["atribut" => "benefit", "bobot" => 0.10],
-        "C6" => ["atribut" => "benefit", "bobot" => 0.20]
+        "C1" => ["atribut" => "cost", "bobot" => 0.20],
+        "C2" => ["atribut" => "cost", "bobot" => 0.17],
+        "C3" => ["atribut" => "benefit", "bobot" => 0.15],
+        "C4" => ["atribut" => "benefit", "bobot" => 0.14],
+        "C5" => ["atribut" => "benefit", "bobot" => 0.18],
+        "C6" => ["atribut" => "benefit", "bobot" => 0.17]
     ];
 
     $payload = json_encode(['alternatif' => $data_python, 'kriteria' => $kriteria]);
