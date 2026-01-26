@@ -8,12 +8,12 @@ $keyword = isset($_GET['keyword']) ? $_GET['keyword'] : '';
 // 1. KONFIGURASI BOBOT SAW (DARI FILTER ATAU DEFAULT)
 // -----------------------------------------------------------
 $default_weights = [
-    'w1' => 20.00,   // Harga (Cost)        -> 0.20
-    'w2' => 17.00,   // Jarak (Cost)        -> 0.17
-    'w3' => 15.00,   // Fasilitas (Benefit) -> 0.15
-    'w4' => 14.00,   // Peraturan (Benefit) -> 0.14
-    'w5' => 18.00,   // Akurasi (Benefit)   -> 0.18
-    'w6' => 17.00    // Ulasan (Benefit)    -> 0.17
+    'w1' => 20,   // Harga (Cost)        -> 0.20
+    'w2' => 17,   // Jarak (Cost)        -> 0.17
+    'w3' => 15,   // Fasilitas (Benefit) -> 0.15
+    'w4' => 14,   // Peraturan (Benefit) -> 0.14
+    'w5' => 18,   // Akurasi (Benefit)   -> 0.18
+    'w6' => 17    // Ulasan (Benefit)    -> 0.17
 ];
 
 // Ambil dari URL jika ada, jika tidak pakai default
@@ -506,7 +506,7 @@ if (mysqli_num_rows($result) > 0) {
         const longUNU = <?= $long_unu ?>;
 
         // debug
-        file_put_contents('debug_playload_saw.json', $payload);
+        // file_put_contents('debug_playload_saw.json', $playload);
 
         // SETUP PETA
         const map = L.map('map', {
