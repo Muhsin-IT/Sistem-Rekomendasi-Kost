@@ -166,7 +166,7 @@ session_start();
     <div class="container mb-5">
         <div class="row align-items-center g-5">
             <div class="col-lg-6 fade-in-up delay-1">
-                <img src="assets/img/logo/unu.webp" alt="Ilustrasi Cari Kost" class="img-fluid rounded-4 shadow-sm">
+                <img src="https://almiftahstore.page.gd/img/TV6Oy.jpg" alt="Ilustrasi Cari Kost" class="img-fluid rounded-4 shadow-sm">
                 <!-- <img src="https://img.freepik.com/free-vector/house-searching-concept-illustration_114360-466.jpg" alt="Ilustrasi Cari Kost" class="img-fluid rounded-4 shadow-sm"> -->
             </div>
             <div class="col-lg-6 fade-in-up delay-1">
