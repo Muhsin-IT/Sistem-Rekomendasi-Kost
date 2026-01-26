@@ -216,7 +216,7 @@ $long_unu = 110.33049620439317;
         }
 
         /* Pastikan selector lebih spesifik agar meng-override bootstrap */
-        div.btn-group.w-100.shadow-sm[role="group"]> .btn {
+        div.btn-group.w-100.shadow-sm[role="group"]>.btn {
             border-radius: 999px;
             background: #ffffff;
             color: #0d6efd;
@@ -230,25 +230,25 @@ $long_unu = 110.33049620439317;
         }
 
         /* Jaga jarak antar tombol (override bootstrap -1px) */
-        div.btn-group.w-100.shadow-sm[role="group"]> .btn + .btn {
+        div.btn-group.w-100.shadow-sm[role="group"]>.btn+.btn {
             margin-left: 8px;
         }
 
         /* Hover lembut */
-        div.btn-group.w-100.shadow-sm[role="group"]> .btn:not(.active):hover {
+        div.btn-group.w-100.shadow-sm[role="group"]>.btn:not(.active):hover {
             background: rgba(13, 110, 253, 0.06);
             transform: translateY(-1px);
         }
 
         /* Fokus aksesibilitas */
-        div.btn-group.w-100.shadow-sm[role="group"]> .btn:focus {
+        div.btn-group.w-100.shadow-sm[role="group"]>.btn:focus {
             outline: none;
             box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.08);
         }
 
         /* Tombol aktif */
-        div.btn-group.w-100.shadow-sm[role="group"]> .btn.active,
-        div.btn-group.w-100.shadow-sm[role="group"]> .btn:active {
+        div.btn-group.w-100.shadow-sm[role="group"]>.btn.active,
+        div.btn-group.w-100.shadow-sm[role="group"]>.btn:active {
             background: #0d6efd;
             color: #ffffff !important;
             border-color: #0d6efd;
@@ -269,7 +269,7 @@ $long_unu = 110.33049620439317;
                     <p class="lead text-muted mb-4" style="font-weight: 400;">Temukan kost strategis, fasilitas lengkap, dan harga yang pas di kantong mahasiswa.</p>
 
                     <div class="search-container d-inline-block w-100" style="max-width: 550px;">
-                        <form action="search.php" method="GET" class="d-flex align-items-center">
+                        <form action="search" method="GET" class="d-flex align-items-center">
                             <i class="bi bi-search text-muted ms-3 fs-5"></i>
                             <input class="form-control search-input ps-3" type="search" placeholder="Cari nama kost..." name="keyword" required>
                             <button class="btn btn-warning text-white fw-bold search-btn" type="submit">CARI</button>
@@ -386,7 +386,7 @@ $long_unu = 110.33049620439317;
             const container = document.getElementById('kost-list-container');
             container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
-            let url = `ajax_get_kost.php?filter=${filter}`;
+            let url = `ajax_get_kost?filter=${filter}`;
             if (userLat && userLong) url += `&lat=${userLat}&long=${userLong}`;
 
             fetch(url)

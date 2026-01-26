@@ -210,7 +210,7 @@ session_start();
             <div class="position-relative z-2">
                 <h2 class="fw-bold mb-3">Siap Mencari Kost Impianmu?</h2>
                 <p class="mb-4 opacity-75">Jangan ragu lagi, temukan tempat tinggal impian di sekitar kampus sekarang juga.</p>
-                <a href="index.php" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">Cari Kost Sekarang</a>
+                <a href="index" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow">Cari Kost Sekarang</a>
             </div>
             <div class="position-absolute top-0 start-0 translate-middle rounded-circle bg-secondary opacity-25" style="width: 300px; height: 300px;"></div>
             <div class="position-absolute bottom-0 end-0 translate-middle-x rounded-circle bg-primary opacity-25" style="width: 200px; height: 200px;"></div>

@@ -149,7 +149,7 @@ foreach ($data_final as $index => $row) {
                             <small class="text-muted" style="font-size: 0.65rem">Mulai dari</small><br>
                             <span class="text-primary fw-bold" style="font-size: 0.9rem;">' . $harga . '</span>
                         </div>
-                        <a href="detail_kost.php?id=' . $row['id_kost'] . '" class="btn btn-sm btn-primary rounded-pill py-0 px-2" style="font-size: 0.75rem">Detail</a>
+                        <a href="detail_kost?id=' . $row['id_kost'] . '" class="btn btn-sm btn-primary rounded-pill py-0 px-2" style="font-size: 0.75rem">Detail</a>
                     </div>
                 </div>
             </div>

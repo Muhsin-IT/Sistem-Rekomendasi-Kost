@@ -377,7 +377,7 @@ if (mysqli_num_rows($result) > 0) {
 
     <div class="search-bar-fixed">
         <div class="container">
-            <form class="input-group input-group-lg" method="GET" action="search.php">
+            <form class="input-group input-group-lg" method="GET" action="search">
                 <input type="text" class="form-control" name="keyword" placeholder="Cari kost lagi..." value="<?= htmlspecialchars($keyword) ?>" />
                 <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
             </form>
@@ -411,7 +411,7 @@ if (mysqli_num_rows($result) > 0) {
                     <div class="alert alert-warning text-center py-4">
                         <i class="bi bi-search display-4 text-muted mb-3 d-block"></i>
                         <h6>Kost tidak ditemukan.</h6>
-                        <p class="text-muted small mb-0">Coba kata kunci lain atau <a href="index.php">kembali ke beranda</a>.</p>
+                        <p class="text-muted small mb-0">Coba kata kunci lain atau <a href="index">kembali ke beranda</a>.</p>
                     </div>
                 <?php else: ?>
                     <div class="d-flex flex-column gap-3">
@@ -466,7 +466,7 @@ if (mysqli_num_rows($result) > 0) {
                                                     <small class="text-muted" style="font-size: 0.65rem">Mulai dari</small><br>
                                                     <span class="text-primary fw-bold" style="font-size: 0.9rem;">Rp <?= number_format($k['harga_tampil'], 0, ',', '.') ?></span>
                                                 </div>
-                                                <a href="detail_kost.php?id=<?= $id ?>" class="btn btn-sm btn-primary rounded-pill py-0 px-2" style="font-size: 0.75rem">Detail</a>
+                                                <a href="detail_kost?id=<?= $id ?>" class="btn btn-sm btn-primary rounded-pill py-0 px-2" style="font-size: 0.75rem">Detail</a>
                                             </div>
                                         </div>
                                     </div>
