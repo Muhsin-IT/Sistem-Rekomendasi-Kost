@@ -5,14 +5,14 @@ include 'koneksi.php';
 
 // Ambil parameter
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'terbaru';
-$user_lat = isset($_GET['lat']) ? $_GET['lat'] : null;
-$user_long = isset($_GET['long']) ? $_GET['long'] : null;
+//$user_lat = isset($_GET['lat']) ? $_GET['lat'] : null;
+//$user_long = isset($_GET['long']) ? $_GET['long'] : null;
 
-// Default Lokasi (UNU)
+// Default Lokasi (UNU) - gunakan selalu sebagai referensi jarak
 $lat_unu = -7.787861880324053;
 $long_unu = 110.33049620439317;
-$titik_lat = $user_lat ? $user_lat : $lat_unu;
-$titik_long = $user_long ? $user_long : $long_unu;
+$titik_lat = $lat_unu; // paksa gunakan UNU, bukan lokasi user
+$titik_long = $long_unu;
 
 function hitungJarak($lat1, $lon1, $lat2, $lon2)
 {
@@ -103,7 +103,8 @@ if ($filter == 'ai') {
 
     $res = mysqli_query($conn, $query_base . " " . $order . " LIMIT 10");
     while ($row = mysqli_fetch_assoc($res)) {
-        $row['jarak_kampus'] = hitungJarak($lat_unu, $long_unu, $row['latitude'], $row['longitude']);
+        // Hitung jarak dari kost ke UNU (format: hitungJarak(lat_kost, long_kost, lat_unu, long_unu))
+        $row['jarak_kampus'] = hitungJarak($row['latitude'], $row['longitude'], $lat_unu, $long_unu);
         $data_final[] = $row;
     }
 }
