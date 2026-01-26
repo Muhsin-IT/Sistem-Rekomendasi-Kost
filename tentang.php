@@ -234,7 +234,7 @@ session_start();
                         <img src="https://ui-avatars.com/api/?name=Qolbin+Salmi&background=141ffd&color=fff" class="w-100 h-100 rounded-circle" alt="Foto">
                     </div>
                     <h5 class="fw-bold mb-1">M Qolbin Salim</h5>
-                    <p class="team-role">2311110XX</p>
+                    <p class="team-role">231111061</p>
                     <p class="small text-muted">Tim Pengembang</p>
                 </div>
             </div>

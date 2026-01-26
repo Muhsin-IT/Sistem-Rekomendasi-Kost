@@ -8,12 +8,12 @@ $keyword = isset($_GET['keyword']) ? $_GET['keyword'] : '';
 // 1. KONFIGURASI BOBOT SAW (DARI FILTER ATAU DEFAULT)
 // -----------------------------------------------------------
 $default_weights = [
-    'w1' => 16.88, // Harga (Cost)
-    'w2' => 15.58, // Jarak (Cost)
-    'w3' => 18.18, // Fasilitas (Benefit)
-    'w4' => 16.88, // Peraturan (Benefit)
-    'w5' => 15.59, // Akurasi (Benefit)
-    'w6' => 16.88  // Ulasan (Benefit)
+    'w1' => 20,   // Harga (Cost)        -> 0.20
+    'w2' => 17,   // Jarak (Cost)        -> 0.17
+    'w3' => 15,   // Fasilitas (Benefit) -> 0.15
+    'w4' => 14,   // Peraturan (Benefit) -> 0.14
+    'w5' => 18,   // Akurasi (Benefit)   -> 0.18
+    'w6' => 17    // Ulasan (Benefit)    -> 0.17
 ];
 
 // Ambil dari URL jika ada, jika tidak pakai default
@@ -134,6 +134,9 @@ if (mysqli_num_rows($result) > 0) {
             'alternatif' => $data_untuk_python,
             'kriteria'   => $config_kriteria
         ]);
+
+        // debug 
+        // file_put_contents('debug_payload_saw.json', $payload);
 
         // Curl Request
         $ch = curl_init($api_url);
