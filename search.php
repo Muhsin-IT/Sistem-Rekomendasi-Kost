@@ -57,23 +57,17 @@ $query = "SELECT DISTINCT k.* FROM kost k
 
 $result = mysqli_query($conn, $query);
 
-// ==================================================================================
-// 2. PERSIAPAN DATA UNTUK PYTHON (SAW)
-// ==================================================================================
+                        // ==================================================================================
+                        // 2. PERSIAPAN DATA UNTUK PYTHON (SAW)
+                        // ==================================================================================
 
-// Koordinat UNU Yogyakarta
-$lat_unu = -7.787861880324053;
-$long_unu = 110.33049620439317;
+                        // Koordinat UNU Yogyakarta (dari konfigurasi terpusat)
+                        include_once __DIR__ . '/includes/config.php';
+                        $lat_unu = LAT_UNU;
+                        $long_unu = LON_UNU;
 
-function hitungJarak($lat1, $lon1, $lat2, $lon2)
-{
-    if (!$lat1 || !$lon1) return 10;
-    $theta = $lon1 - $lon2;
-    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-    $dist = acos($dist);
-    $dist = rad2deg($dist);
-    return round($dist * 60 * 1.1515 * 1.609344, 2);
-}
+                        // Gunakan helper terpusat untuk perhitungan jarak (UNU sebagai referensi)
+                        include_once __DIR__ . '/includes/jarak.php';
 
 // Cek apakah ada hasil dari database
 if (mysqli_num_rows($result) > 0) {

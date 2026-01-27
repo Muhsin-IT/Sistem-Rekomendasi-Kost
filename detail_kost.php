@@ -67,21 +67,14 @@ if ($total_review > 0) {
     $avg_rating  = round($sum_rating / $total_review, 1);
     $avg_akurasi = round($sum_akurasi / $total_review, 1);
 }
-// ===============================================================
-// Fungsi Jarak & Koordinat UNU
-$lat_unu = -7.787861880324053;
-$long_unu = 110.33049620439317;
-
-function hitungJarak($lat1, $lon1, $lat2, $lon2)
-{
-    if (!$lat1 || !$lon1) return 0;
-    $earth = 6371;
-    $dLat = deg2rad($lat2 - $lat1);
-    $dLon = deg2rad($lon2 - $lon1);
-    $a = sin($dLat / 2) * sin($dLat / 2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) * sin($dLon / 2);
-    return round($earth * (2 * atan2(sqrt($a), sqrt(1 - $a))), 2);
-}
-$jarak = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu, $long_unu);
+    // ===============================================================
+    // Fungsi Jarak & Koordinat UNU
+    include_once __DIR__ . '/includes/config.php';
+    // Sertakan helper jarak terpusat dan hitung jarak dari UNU ke kost
+    include_once __DIR__ . '/includes/jarak.php';
+    $lat_unu = LAT_UNU;
+    $long_unu = LON_UNU;
+    $jarak = hitungJarak($lat_unu, $long_unu, $kost['latitude'], $kost['longitude']);
 
 // ==========================================================
 // LOGIC FAIR PRICE CHECKER 
@@ -103,14 +96,14 @@ $query_market = "SELECT k.id_kost, k.latitude, k.longitude,
 $res_market = mysqli_query($conn, $query_market);
 $market_data = [];
 
-// Koordinat UNU (Pastikan variabel ini terbaca, jika error definisikan ulang di sini)
-$lat_unu_ai = -7.787861880324053;
-$long_unu_ai = 110.33049620439317;
+    // Koordinat UNU - gunakan yang sama seperti di atas
+    $lat_unu_ai = $lat_unu;
+    $long_unu_ai = $long_unu;
 
 while ($m = mysqli_fetch_assoc($res_market)) {
     if ($m['harga'] > 0) {
-        // Gunakan fungsi hitungJarak yang sudah ada di file Anda
-        $jarak = hitungJarak($m['latitude'], $m['longitude'], $lat_unu_ai, $long_unu_ai);
+        // Hitung jarak dari UNU ke kost pasar
+        $jarak = hitungJarak($lat_unu, $long_unu, $m['latitude'], $m['longitude']);
         $market_data[] = [
             'price' => (int)$m['harga'],
             'distance' => (float)$jarak,
@@ -122,7 +115,7 @@ while ($m = mysqli_fetch_assoc($res_market)) {
 
 // 2. Siapkan Data Target (Kost ini)
 // PERBAIKAN DISINI: Ganti $data_kost menjadi $kost
-$jarak_target = hitungJarak($kost['latitude'], $kost['longitude'], $lat_unu_ai, $long_unu_ai);
+$jarak_target = hitungJarak($lat_unu, $long_unu, $kost['latitude'], $kost['longitude']);
 $q_fas_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_fasilitas WHERE id_kost='$id_kost'"));
 $q_per_target = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM rel_peraturan WHERE id_kost='$id_kost'"));
 

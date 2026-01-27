@@ -9,20 +9,15 @@ $filter = isset($_GET['filter']) ? $_GET['filter'] : 'terbaru';
 //$user_long = isset($_GET['long']) ? $_GET['long'] : null;
 
 // Default Lokasi (UNU) - gunakan selalu sebagai referensi jarak
-$lat_unu = -7.787861880324053;
-$long_unu = 110.33049620439317;
+// Default Lokasi (UNU) - gunakan konfigurasi terpusat
+include_once __DIR__ . '/includes/config.php';
+$lat_unu = LAT_UNU;
+$long_unu = LON_UNU;
 $titik_lat = $lat_unu; // paksa gunakan UNU, bukan lokasi user
-$titik_long = $long_unu;
+$titik_long = $lat_unu ? $long_unu : $long_unu;
 
-function hitungJarak($lat1, $lon1, $lat2, $lon2)
-{
-    if (!$lat1 || !$lon1 || !$lat2 || !$lon2) return 0;
-    $theta = $lon1 - $lon2;
-    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-    $dist = acos($dist);
-    $dist = rad2deg($dist);
-    return round($dist * 60 * 1.1515 * 1.609344, 1);
-}
+// Gunakan helper terpusat untuk perhitungan jarak
+include_once __DIR__ . '/includes/jarak.php';
 
 // QUERY DASAR
 $query_base = "SELECT k.*, 

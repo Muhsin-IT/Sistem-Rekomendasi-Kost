@@ -1,8 +1,9 @@
 <?php
 session_start();
-// Tidak perlu query data di sini lagi, semua lewat AJAX
-$lat_unu = -7.787861880324053;
-$long_unu = 110.33049620439317;
+                        // Tidak perlu query data di sini lagi, semua lewat AJAX
+                        include_once __DIR__ . '/includes/config.php';
+                        $lat_unu = LAT_UNU;
+                        $long_unu = LON_UNU;
 ?>
 
 <!DOCTYPE html>
