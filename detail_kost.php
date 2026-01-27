@@ -67,14 +67,14 @@ if ($total_review > 0) {
     $avg_rating  = round($sum_rating / $total_review, 1);
     $avg_akurasi = round($sum_akurasi / $total_review, 1);
 }
-    // ===============================================================
-    // Fungsi Jarak & Koordinat UNU
-    include_once __DIR__ . '/includes/config.php';
-    // Sertakan helper jarak terpusat dan hitung jarak dari UNU ke kost
-    include_once __DIR__ . '/includes/jarak.php';
-    $lat_unu = LAT_UNU;
-    $long_unu = LON_UNU;
-    $jarak = hitungJarak($lat_unu, $long_unu, $kost['latitude'], $kost['longitude']);
+// ===============================================================
+// Fungsi Jarak & Koordinat UNU
+include_once __DIR__ . '/includes/config.php';
+// Sertakan helper jarak terpusat dan hitung jarak dari UNU ke kost
+include_once __DIR__ . '/includes/jarak.php';
+$lat_unu = LAT_UNU;
+$long_unu = LON_UNU;
+$jarak = hitungJarak($lat_unu, $long_unu, $kost['latitude'], $kost['longitude']);
 
 // ==========================================================
 // LOGIC FAIR PRICE CHECKER 
@@ -96,17 +96,17 @@ $query_market = "SELECT k.id_kost, k.latitude, k.longitude,
 $res_market = mysqli_query($conn, $query_market);
 $market_data = [];
 
-    // Koordinat UNU - gunakan yang sama seperti di atas
-    $lat_unu_ai = $lat_unu;
-    $long_unu_ai = $long_unu;
+// Koordinat UNU - gunakan yang sama seperti di atas
+$lat_unu_ai = $lat_unu;
+$long_unu_ai = $long_unu;
 
 while ($m = mysqli_fetch_assoc($res_market)) {
     if ($m['harga'] > 0) {
         // Hitung jarak dari UNU ke kost pasar
-        $jarak = hitungJarak($lat_unu, $long_unu, $m['latitude'], $m['longitude']);
+        $jarak_market = hitungJarak($lat_unu, $long_unu, $m['latitude'], $m['longitude']);
         $market_data[] = [
             'price' => (int)$m['harga'],
-            'distance' => (float)$jarak,
+            'distance' => (float)$jarak_market,
             'total_fasilitas' => (int)$m['jum_fas'],
             'total_peraturan' => (int)$m['jum_per']
         ];
@@ -779,7 +779,7 @@ if (isset($_SESSION['login'])) {
                             </div>
                         </div>
                         <div class="alert alert-info mb-3 py-2">
-                            <small><i class="bi bi-info-circle"></i> Jarak dari kampus UNU: <strong><?= $jarak ?> km</strong></small>
+                            <small><i class="bi bi-info-circle"></i> Jarak dari kampus UNU: <strong><?= $jarak_target ?> km</strong></small>
                         </div>
 
                         <!-- TEMPAT TERDEKAT -->
