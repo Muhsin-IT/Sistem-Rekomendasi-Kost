@@ -107,6 +107,10 @@ Pastikan URL API di dalam file PHP Anda sudah mengarah ke alamat layanan Python 
 
 ---
 
+### 📚 Tampilan Website
+![Tampilan Website](Tampilan-Web-RadenStay.jpeg)
+
+---
 ### 📄 Lisensi & Hak Cipta
-*© 2025 (Muhsin-It)[https://github.com/Muhsin-IT]. All Rights Reserved.*
-*Source code ini dapat dipelajari dan dikembangkan lebih lanjut. (Kunjungi profil GitHub saya)[https://github.com/Muhsin-IT] untuk pembaruan atau proyek lainnya*
+*© 2025 [Muhsin-It](https://github.com/Muhsin-IT). All Rights Reserved.*
+*Source code ini dapat dipelajari dan dikembangkan lebih lanjut. [Kunjungi profil GitHub saya](https://github.com/Muhsin-IT) untuk pembaruan atau proyek lainnya*
